@@ -1,7 +1,7 @@
 #ifndef MATHPARSER_H
 #define MATHPARSER_H
 #define STACKSIZE 4096
-#define INSTRUCTIONLISTSIZE 16384
+#define INSTRUCTIONLISTSIZE 4096
 #define NUMFUNC 5
 #define NUMOP 5
 #include <stdio.h>
@@ -15,28 +15,25 @@ typedef QChar Char;
 extern Char op[NUMOP];
 extern String funcName[NUMFUNC];
 extern int funcNumArgs[NUMFUNC];
-enum Instruction{PUSHVAR,PUSHVAL,ADD,SUB,MULT,DIV,INV,POW_N,POW,SIN,COS,TAN,EXP,CALL,END};
-extern long opcode[NUMOP];
-extern long funcCode[NUMFUNC];
+enum Instruction{PUSHVAR,PUSHVAL,ADD,PVARADD,PVALADD,SUB,PVARSUB,PVALSUB,MULT,PVARMULT,PVALMULT,DIV,PVARDIV,PVALDIV,INV,PVARINV,PVALINV,POW_N,PVARPOW_N,PVALPOW_N,POW,PVARPOW,PVALPOW,SIN,PVARSIN,PVALSIN,COS,PVARCOS,PVALCOS,TAN,PVARTAN,PVALTAN,EXP,PVAREXP,PVALEXP};
+extern int opcode[NUMOP];
+extern int funcCode[NUMFUNC];
 
 template <class C>
 class MathEval
 {
 public:
-    MathEval():readPos(0),writePos(0),stackPos(0), done(false){}
-    void reset(){readPos=0; writePos=0; stackPos=0; done=false;}
-    void setVar(char c,C val){variables[c]=val;}
-    C getVar(char c){return variables[c];}
-    void pushVar(int c){stack[stackPos++]=variables[c];}
-    void pushVal(C val){stack[stackPos++]=val;}
+    MathEval():stackPos(0), endInstr(instructionList), instrptr(instructionList), dataptr(data){}
+    void reset(){instrptr=instructionList; stackPos=0; dataptr=data; endInstr=instructionList;}
+    C* getVarPtr(char c){return (c>='a' && c<='z')?(&variables[c-'a']):0;}
+    inline void pushPtrVal(C* ptr){stack[stackPos++]=*ptr;}
+    inline void pushVal(C val){stack[stackPos++]=val;}
     C pop(){return stack[--stackPos];}
     C result(){return stack[stackPos-1];}
-    void run(){done=0; stackPos=0; readPos=0; while(!done) processInstruction();}
+    void run(){stackPos=0; dataptr=data; instrptr=instructionList; while(instrptr!=endInstr) processInstruction();}
     void processInstruction()
     {
-        long instruction;
-        read(&instruction,sizeof(long));
-        switch(instruction)
+        switch(*(instrptr++))
         {
         case PUSHVAR:
             {pushvar_();}
@@ -47,51 +44,159 @@ public:
         case ADD:
             {add_();}
             break;
+        case PVARADD:
+            {pvaradd_();}
+            break;
+        case PVALADD:
+            {pvaladd_();}
+            break;
         case SUB:
             {sub_();}
+            break;
+        case PVARSUB:
+            {pvarsub_();}
+            break;
+        case PVALSUB:
+            {pvalsub_();}
             break;
         case MULT:
             {mult_();}
             break;
+        case PVARMULT:
+            {pvarmult_();}
+            break;
+        case PVALMULT:
+            {pvalmult_();}
+            break;
         case DIV:
             {div_();}
             break;
+        case PVARDIV:
+            {pvardiv_();}
+            break;
+        case PVALDIV:
+            {pvaldiv_();}
+            break;
         case INV:
-            {inv();}
+            {inv_();}
+            break;
+        case PVARINV:
+            {pvarinv_();}
+            break;
+        case PVALINV:
+            {pvalinv_();}
             break;
         case POW_N:
-            {int n; read(&n,sizeof(int)); pow_(n);}
+            {pow_n_();}
+            break;
+        case PVARPOW_N:
+            {pvarpow_n_();}
+            break;
+        case PVALPOW_N:
+            {pvalpow_n_();}
             break;
         case POW:
             {pow_();}
             break;
+        case PVARPOW:
+            {pvarpow_();}
+            break;
+        case PVALPOW:
+            {pvalpow_();}
         case SIN:
             {sin_();}
             break;
+        case PVARSIN:
+            {pvarsin_();}
+            break;
+        case PVALSIN:
+            {pvalsin_();}
         case COS:
             {cos_();}
             break;
+        case PVARCOS:
+            {pvarcos_();}
+            break;
+        case PVALCOS:
+            {pvalcos_();}
         case TAN:
             {tan_();}
             break;
+        case PVARTAN:
+            {pvartan_();}
+            break;
+        case PVALTAN:
+            {pvaltan_();}
         case EXP:
             {exp_();}
             break;
-        case END:
-            {done=true;}
+        case PVAREXP:
+            {pvarexp_();}
             break;
+        case PVALEXP:
+            {pvalexp_();}
         }
     }
-    inline void pushval_() {C val; read(&val,sizeof(C)); pushVal(val);}
-    inline void pushvar_() {int c; read(&c,sizeof(int)); pushVar(c);}
+    inline void pushvar_() {pushPtrVal(readPtr());}
+    inline void pushval_() {pushVal(readVal());}
     inline void add_(){stack[stackPos-2]+=stack[stackPos-1];--stackPos;}
+    inline void pvaradd_(){stack[stackPos-1]+=*readPtr();}
+    inline void pvaladd_(){stack[stackPos-1]+=readVal();}
     inline void sub_(){stack[stackPos-2]-=stack[stackPos-1];--stackPos;}
+    inline void pvarsub_(){stack[stackPos-1]-=*readPtr();}
+    inline void pvalsub_(){stack[stackPos-1]-=readVal();}
     inline void mult_(){stack[stackPos-2]*=stack[stackPos-1];--stackPos;}
+    inline void pvarmult_(){stack[stackPos-1]*=*readPtr();}
+    inline void pvalmult_(){stack[stackPos-1]*=readVal();}
     inline void div_(){stack[stackPos-2]/=stack[stackPos-1];--stackPos;}
-    virtual void inv(){pushVal(1./pop());}
-    void pow_(int n){pushVal(pow_(pop(),n));}
-    void read(void* dst,int size){memcpy(dst,instructionList+readPos,size); readPos+=size;}
-    void write(void* src,int size){memcpy(instructionList+writePos,src,size);writePos+=size;}
+    inline void pvardiv_(){stack[stackPos-1]/=*readPtr();}
+    inline void pvaldiv_(){stack[stackPos-1]/=readVal();}
+    inline virtual void inv_(){stack[stackPos-1]=1/stack[stackPos-1];}
+    inline virtual void pvarinv_(){stack[stackPos++]=1/(*readPtr());}
+    inline virtual void pvalinv_(){stack[stackPos++]=1/(readVal());}
+    inline virtual void pow_n_(){stack[stackPos-1]=pow_(stack[stackPos-1],readInt());}
+    inline virtual void pvarpow_n_(){C val=*readPtr(); stack[stackPos++]=pow_(val,readInt());}
+    inline virtual void pvalpow_n_(){C val=readVal(); stack[stackPos++]=pow_(val,readInt());}
+    inline virtual void pow_() {stack[stackPos-2]=pow(stack[stackPos-2],stack[stackPos-1]);--stackPos;}
+    inline virtual void pvarpow_(){stack[stackPos-1]=pow(stack[stackPos-1],*readPtr());}
+    inline virtual void pvalpow_(){stack[stackPos-1]=pow(stack[stackPos-1],readVal());}
+    inline virtual void sin_() {stack[stackPos-1]=sin(stack[stackPos-1]);}
+    inline virtual void pvarsin_(){stack[stackPos++]=sin(*readPtr());}
+    inline virtual void pvalsin_(){stack[stackPos++]=sin(readVal());}
+    inline virtual void cos_() {stack[stackPos-1]=cos(stack[stackPos-1]);}
+    inline virtual void pvarcos_(){stack[stackPos++]=cos(*readPtr());}
+    inline virtual void pvalcos_(){stack[stackPos++]=cos(readVal());}
+    inline virtual void tan_() {stack[stackPos-1]=tan(stack[stackPos-1]);}
+    inline virtual void pvartan_(){stack[stackPos++]=tan(*readPtr());}
+    inline virtual void pvaltan_(){stack[stackPos++]=tan(readVal());}
+    inline virtual void exp_() {stack[stackPos-1]=exp(stack[stackPos-1]);}
+    inline virtual void pvarexp_(){stack[stackPos++]=exp(*readPtr());}
+    inline virtual void pvalexp_(){stack[stackPos++]=exp(readVal());}
+    inline void read(void* dst,int size){memcpy(dst,dataptr,size); dataptr+=size;}
+    inline void write(void* src,int size){memcpy(dataptr,src,size);dataptr+=size;}
+    inline C readVal(){C val=*(reinterpret_cast<C*>(dataptr)); dataptr+=sizeof(C); return val;}
+    inline C* readPtr(){
+        C* ptr=*(reinterpret_cast<C**>(dataptr));
+        dataptr+=sizeof(C*);
+        return ptr;
+    }
+    inline int readInt(){
+        int i=*(reinterpret_cast<int*>(dataptr));
+        dataptr+=sizeof(int);
+        return i;
+    }
+    inline void writeVal(C val){write(&val,sizeof(C));}
+    inline void writePtr(C* ptr){write(&ptr,sizeof(C*));}
+    inline void writeInt(int i){write(&i,sizeof(int));}
+    void writeInstr(int instruction)
+    {
+        if(*(instrptr-1)<=1 && instruction>1)
+            *(instrptr-1)=instruction+*(instrptr-1)+1;
+        else
+            *(instrptr++)=instruction;
+    }
+    void setInstrEnd(){endInstr=instrptr;}
+
     C pow_(C val, int n){return n>0?pow1(val,n):n<0?1/pow1(val,-n):1;}
     C pow1(C val,int n){
         if(n==1)
@@ -100,25 +205,21 @@ public:
         {
             C tmp=pow1(val,n/2);
             tmp*=tmp;
-            tmp*=(n%2?val:1);
+            if(n%2)
+                tmp*=val;
             return tmp;
         }
     }
-    virtual void pow_() {C b=pop(),a=pop();
-                       pushVal(pow(a,b));}
-    virtual void sin_() {pushVal(sin(pop()));}
-    virtual void cos_() {pushVal(cos(pop()));}
-    virtual void tan_() {pushVal(tan(pop()));}
-    virtual void exp_() {pushVal(exp(pop()));}
 
 private:
     C stack[STACKSIZE];
-    C variables[256];
-    char instructionList[INSTRUCTIONLISTSIZE];
-    int readPos;
-    int writePos;
+    C variables[26];
+    int instructionList[INSTRUCTIONLISTSIZE];
+    char data[INSTRUCTIONLISTSIZE*8];
     int stackPos;
-    bool done;
+    int* endInstr;
+    int* instrptr;
+    char* dataptr;
 };
 
 template <class C>
@@ -134,15 +235,12 @@ public:
         int lenread=parseToMathEval(0,0);
         if(lenread!=str.length())
         {
-            long opcode_=END;
             mathEval->reset();
-            mathEval->write(&opcode_,sizeof(long));
             return false;
         }
         else
         {
-            long opcode_=END;
-            mathEval->write(&opcode_,sizeof(long));
+            mathEval->setInstrEnd();
             return true;
         }
     }
@@ -173,7 +271,7 @@ private:
                         --newpos;
                         return newpos-pos;
                     }
-                    mathEval->write(&opcode[level],sizeof(long));
+                    mathEval->writeInstr(opcode[level]);
                     newpos+=lenread;
                 }
             }
@@ -190,15 +288,14 @@ private:
                         lenread=readIntNumber(newpos,&n);
                         if(lenread==0)
                         {
-                            //to do: allow for atomic expressions to be read. requires further development of MathEval.
                             --newpos;
                             return newpos-pos;
                         }
                         else
                         {
                             newpos+=lenread;
-                            mathEval->write(&opcode[level],sizeof(long));
-                            mathEval->write(&n,sizeof(int));
+                            mathEval->writeInstr(opcode[level]);
+                            mathEval->writeInt(n);
                         }
                     }
                 }
@@ -261,17 +358,15 @@ private:
                 ++newpos;
         }
         C val=str.mid(pos,newpos-pos).toDouble();
-        long opcode_=PUSHVAL;
-        mathEval->write(&opcode_,sizeof(long));
-        mathEval->write(&val,sizeof(C));
+        mathEval->writeInstr(PUSHVAL);
+        mathEval->writeVal(val);
         return newpos-pos;
     }
     int parseVar(int pos)
     {
         int c=str[pos].toLatin1();
-        long opcode_=PUSHVAR;
-        mathEval->write(&opcode_,sizeof(long));
-        mathEval->write(&c,sizeof(int));
+        mathEval->writeInstr(PUSHVAR);
+        mathEval->writePtr(mathEval->getVarPtr(c));
         return 1;
     }
     int parseFunc(int pos)
@@ -308,8 +403,7 @@ private:
                 if(str[newpos]!=')')
                     return 0;
                 ++newpos;
-                long opcode_=funcCode[funcIndex];
-                mathEval->write(&opcode_,sizeof(long));
+                mathEval->writeInstr(funcCode[funcIndex]);
                 return newpos-pos;
             }
             ++funcIndex;

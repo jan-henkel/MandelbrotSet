@@ -8,6 +8,7 @@ void MandelbrotSet::render(double xCenter, double yCenter, int width, int height
 
     int palettewidth=colorPalette_->width();
     unsigned long *palette=reinterpret_cast<unsigned long*>(colorPalette_->scanLine(0));
+    Complex *ec=mathEval_->getVarPtr('c'),*ex=mathEval_->getVarPtr('x');
     for(int iy=0;iy<height;++iy)
     {
         unsigned long *scanline=reinterpret_cast<unsigned long*>(image.scanLine(iy));
@@ -15,13 +16,14 @@ void MandelbrotSet::render(double xCenter, double yCenter, int width, int height
         {
             double x=(ix-halfWidth)*scale+xCenter;
             double y=(iy-halfHeight)*scale+yCenter;
-            mathEval_->setVar('c',Complex(x,y));
-            mathEval_->setVar('x',Complex(0,0));
+
+            *ec=Complex(x,y);
+            *ex=Complex(0,0);
             int it=0;
-            while(it<nIterations && mathEval_->getVar('x').norm2()<=limit)
+            while(it<nIterations && ex->norm2()<=limit)
             {
                 mathEval_->run();
-                mathEval_->setVar('x',mathEval_->pop());
+                *ex=mathEval_->result();
                 ++it;
             }
             if(it==nIterations)

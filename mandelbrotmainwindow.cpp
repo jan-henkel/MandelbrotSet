@@ -43,6 +43,6 @@ void MandelbrotMainWindow::on_generatePushButton_clicked()
     double limit=ui->limitLineEdit->text().toDouble(&ok);
     if(parser.parse() && ok)
     {
-        mandelbrotSet.render(DefaultCenterX,DefaultCenterY,ui->mandelbrotGraphicsView->width(),ui->mandelbrotGraphicsView->height(),DefaultScale,20,limit);
+        mandelbrotSet.render(DefaultCenterX,DefaultCenterY,ui->mandelbrotGraphicsView->width(),ui->mandelbrotGraphicsView->height(),DefaultScale,100,limit);
     }
 }
