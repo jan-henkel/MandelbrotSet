@@ -103,6 +103,7 @@ public:
             break;
         case PVALPOW:
             {pvalpow_();}
+            break;
         case SIN:
             {sin_();}
             break;
@@ -119,6 +120,7 @@ public:
             break;
         case PVALCOS:
             {pvalcos_();}
+            break;
         case TAN:
             {tan_();}
             break;
@@ -135,6 +137,7 @@ public:
             break;
         case PVALEXP:
             {pvalexp_();}
+            break;
         }
     }
     inline void pushvar_() {pushPtrVal(readPtr());}

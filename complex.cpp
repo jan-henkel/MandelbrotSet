@@ -43,7 +43,7 @@ Complex pow(const Complex a, const Complex b)
     else
     {
         double r=a.norm();
-        double phi=(abs(a.R())>abs(a.I()))?(a.I()<0?-1:1)*acos(a.R()/r):(a.R()<0?-1:1)*asin(a.I()/r);
+        double phi=(a.I()<0?-1:1)*acos(a.R()/r);
         double q=pow(r,b.R())*exp(-phi*b.I());
         return Complex(q*cos(phi*b.R()+log(r)*b.I()),q*sin(phi*b.R()+log(r)*b.I()));
     }
