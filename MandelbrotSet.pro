@@ -11,7 +11,6 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 TARGET = MandelbrotSet
 TEMPLATE = app
 
-
 SOURCES += main.cpp\
         mandelbrotmainwindow.cpp \
     mandelbrotset.cpp \
