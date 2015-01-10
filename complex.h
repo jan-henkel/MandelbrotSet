@@ -28,10 +28,10 @@ public:
     double norm() const {return sqrt(norm2());}
     Complex conj(){return Complex(fR,-fI);}
     Complex inv() const {return Complex(fR/norm2(),-fI/norm2());}
-    void operator *=(Complex other){double tmp=fR; fR=fR*other.fR-fI*other.fI; fI=tmp*other.fI+fI*other.fR;}
-    void operator /=(Complex other){*this*=other.inv();}
-    void operator +=(Complex other){fR+=other.fR; fI+=other.fI;}
-    void operator -=(Complex other){fR-=other.fR; fI-=other.fI;}
+    inline void operator *=(Complex other){double tmp=fR; fR=fR*other.fR-fI*other.fI; fI=tmp*other.fI+fI*other.fR;}
+    inline void operator /=(Complex other){*this*=other.inv();}
+    inline void operator +=(Complex other){fR+=other.fR; fI+=other.fI;}
+    inline void operator -=(Complex other){fR-=other.fR; fI-=other.fI;}
     double R() const {return fR;}
     double I() const {return fI;}
     void setR(double fr){fR=fr;}
