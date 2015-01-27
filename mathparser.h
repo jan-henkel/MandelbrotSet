@@ -1,7 +1,7 @@
 #ifndef MATHPARSER_H
 #define MATHPARSER_H
-#define STACKSIZE 4096
-#define INSTRUCTIONLISTSIZE 4096
+#define STACKSIZE 256
+#define INSTRUCTIONLISTSIZE 256
 #define NUMFUNC 5
 #define NUMOP 5
 #include <stdio.h>
