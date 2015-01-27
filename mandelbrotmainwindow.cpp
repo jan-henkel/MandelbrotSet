@@ -24,9 +24,11 @@ MandelbrotMainWindow::MandelbrotMainWindow(QWidget *parent) :
     scene.setSceneRect(0,0,ui->mandelbrotGraphicsView->width(),ui->mandelbrotGraphicsView->height());
     ui->mandelbrotGraphicsView->setScene(&scene);
     scene.addItem(&mandelbrotPixmapItem);
-    QObject::connect(&mandelbrotSet,SIGNAL(imageOut(QImage)),this,SLOT(updateMandelbrotImage(QImage)));
+    QObject::connect(&mandelbrotSet,SIGNAL(imageOut(QImage)),this,SLOT(updateMandelbrotImage(QImage)),Qt::QueuedConnection);
     QObject::connect(ui->mandelbrotGraphicsView,SIGNAL(updateOffsetDrag(QPoint)),this,SLOT(updateImageOffsetDrag(QPoint)));
     QObject::connect(ui->mandelbrotGraphicsView,SIGNAL(updateOffsetRelease(QPoint)),this,SLOT(updateImageOffsetRelease(QPoint)));
+    QObject::connect(ui->mandelbrotGraphicsView,SIGNAL(updateViewRect(QRectF)),this,SLOT(updateImageViewRect(QRectF)));
+    QObject::connect(this,SIGNAL(renderMandelbrot(double,double,int,int,double,int,double)),&mandelbrotSet,SLOT(renderMandelbrot(double,double,int,int,double,int,double)));
     if(mandelbrotSet.thread()==this->thread())
     {QMessageBox msgBox;
         msgBox.setText("Same thread.");
@@ -52,22 +54,65 @@ void MandelbrotMainWindow::updateImageOffsetRelease(QPoint newOffset)
     renderMandelbrot();
 }
 
+void MandelbrotMainWindow::updateImageViewRect(QRectF viewRect)
+{
+    centerX+=scale*(viewRect.x()+viewRect.width()/2-ui->mandelbrotGraphicsView->width()/2);
+    centerY+=scale*(viewRect.y()+viewRect.height()/2-ui->mandelbrotGraphicsView->height()/2);
+    scale*=viewRect.width()/ui->mandelbrotGraphicsView->width();
+    renderMandelbrot();
+}
+
 void ScrollableGraphicsView::mousePressEvent(QMouseEvent *event)
 {
     if(event->button()==Qt::LeftButton)
-        clickPos=event->pos();
+        dragClickPos=event->pos();
+    if(event->button()==Qt::RightButton)
+    {
+        zoomClickPos=event->pos();
+        int w,h;
+        w=minZoomWidth;
+        h=minZoomHeight;
+        if(this->width()>this->height())
+            w=h*width()/height();
+        else
+            h=w*height()/width();
+        zoomRect.setRect(event->pos().x(),event->pos().y(),w,h);
+        this->scene()->addItem(&zoomRect);
+        this->update();
+    }
+}
+
+void ScrollableGraphicsView::updateZoomRect(QPoint p1, QPoint p2)
+{
+    QPoint d=p2-p1;
+    int w,h;
+    w=(d.x()<minZoomWidth)?minZoomWidth:d.x();
+    h=(d.y()<minZoomHeight)?minZoomHeight:d.y();
+    if(this->width()>this->height())
+        w=h*width()/height();
+    else
+        h=w*height()/width();
+    zoomRect.setRect(zoomClickPos.x(),zoomClickPos.y(),w,h);
+    this->update();
 }
 
 void ScrollableGraphicsView::mouseMoveEvent(QMouseEvent *event)
 {
     if(event->buttons() & Qt::LeftButton)
-        emit updateOffsetDrag(event->pos()-clickPos);
+        emit updateOffsetDrag(event->pos()-dragClickPos);
+    if(event->buttons() & Qt::RightButton)
+        emit updateZoomRect(zoomClickPos,event->pos());
 }
 
 void ScrollableGraphicsView::mouseReleaseEvent(QMouseEvent *event)
 {
     if(event->button() == Qt::LeftButton)
-        emit updateOffsetRelease(event->pos()-clickPos);
+        emit updateOffsetRelease(event->pos()-dragClickPos);
+    if(event->button() == Qt::RightButton)
+    {
+        this->scene()->removeItem(&zoomRect);
+        emit updateViewRect(this->zoomRect.rect());
+    }
 }
 
 void MandelbrotMainWindow::updateMandelbrotImage(QImage image)
@@ -86,10 +131,14 @@ void MandelbrotMainWindow::updateMandelbrotImage(QImage image)
 
 void MandelbrotMainWindow::renderMandelbrot()
 {
-    QMetaObject::invokeMethod(&mandelbrotSet,"renderMandelbrot",Qt::QueuedConnection,Q_ARG(double,centerX),Q_ARG(double,centerY),Q_ARG(int,ui->mandelbrotGraphicsView->width()),Q_ARG(int,ui->mandelbrotGraphicsView->height()),Q_ARG(double,scale),Q_ARG(int,nIterations/8),Q_ARG(double,limit));
+    /*QMetaObject::invokeMethod(&mandelbrotSet,"renderMandelbrot",Qt::QueuedConnection,Q_ARG(double,centerX),Q_ARG(double,centerY),Q_ARG(int,ui->mandelbrotGraphicsView->width()),Q_ARG(int,ui->mandelbrotGraphicsView->height()),Q_ARG(double,scale),Q_ARG(int,nIterations/8),Q_ARG(double,limit));
     QMetaObject::invokeMethod(&mandelbrotSet,"renderMandelbrot",Qt::QueuedConnection,Q_ARG(double,centerX),Q_ARG(double,centerY),Q_ARG(int,ui->mandelbrotGraphicsView->width()),Q_ARG(int,ui->mandelbrotGraphicsView->height()),Q_ARG(double,scale),Q_ARG(int,nIterations/4),Q_ARG(double,limit));
     QMetaObject::invokeMethod(&mandelbrotSet,"renderMandelbrot",Qt::QueuedConnection,Q_ARG(double,centerX),Q_ARG(double,centerY),Q_ARG(int,ui->mandelbrotGraphicsView->width()),Q_ARG(int,ui->mandelbrotGraphicsView->height()),Q_ARG(double,scale),Q_ARG(int,nIterations/2),Q_ARG(double,limit));
     QMetaObject::invokeMethod(&mandelbrotSet,"renderMandelbrot",Qt::QueuedConnection,Q_ARG(double,centerX),Q_ARG(double,centerY),Q_ARG(int,ui->mandelbrotGraphicsView->width()),Q_ARG(int,ui->mandelbrotGraphicsView->height()),Q_ARG(double,scale),Q_ARG(int,nIterations),Q_ARG(double,limit));
+    */
+    emit renderMandelbrot(centerX,centerY,ui->mandelbrotGraphicsView->width(),ui->mandelbrotGraphicsView->height(),scale,nIterations/8,limit);
+    emit renderMandelbrot(centerX,centerY,ui->mandelbrotGraphicsView->width(),ui->mandelbrotGraphicsView->height(),scale,nIterations/4,limit);
+    emit renderMandelbrot(centerX,centerY,ui->mandelbrotGraphicsView->width(),ui->mandelbrotGraphicsView->height(),scale,nIterations,limit);
     /*mandelbrotSet.renderMandelbrot(centerX,centerY,ui->mandelbrotGraphicsView->width(),ui->mandelbrotGraphicsView->height(),scale,nIterations/8,limit);
     mandelbrotSet.renderMandelbrot(centerX,centerY,ui->mandelbrotGraphicsView->width(),ui->mandelbrotGraphicsView->height(),scale,nIterations/4,limit);
     mandelbrotSet.renderMandelbrot(centerX,centerY,ui->mandelbrotGraphicsView->width(),ui->mandelbrotGraphicsView->height(),scale,nIterations/2,limit);

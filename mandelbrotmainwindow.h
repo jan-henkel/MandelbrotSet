@@ -23,6 +23,8 @@ class MandelbrotMainWindow : public QMainWindow
 public:
     explicit MandelbrotMainWindow(QWidget *parent = 0);
     ~MandelbrotMainWindow();
+signals:
+    void renderMandelbrot(double xCenter,double yCenter, int width, int height, double scale, int nIterations, double limit);
 public slots:
     void updateMandelbrotImage(QImage image);
 protected:
@@ -30,6 +32,7 @@ protected:
 private slots:
     void updateImageOffsetDrag(QPoint newOffset);
     void updateImageOffsetRelease(QPoint newOffset);
+    void updateImageViewRect(QRectF viewRect);
     void on_setColorPalettePushButton_clicked();
     void on_generateMandelbrotPushButton_clicked();
 
@@ -60,12 +63,18 @@ public:
 signals:
     void updateOffsetDrag(QPoint dOffset);
     void updateOffsetRelease(QPoint dOffset);
+    void updateViewRect(QRectF);
 protected:
     void mousePressEvent(QMouseEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
+    void updateZoomRect(QPoint p1,QPoint p2);
 private:
-    QPoint clickPos;
+    QPoint dragClickPos;
+    QPoint zoomClickPos;
+    QGraphicsRectItem zoomRect;
+    int minZoomWidth=20;
+    int minZoomHeight=20;
 };
 
 #endif // MANDELBROTMAINWINDOW_H

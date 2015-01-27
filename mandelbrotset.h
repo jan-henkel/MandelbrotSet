@@ -12,7 +12,7 @@ class MandelbrotSet : public QObject
     Q_OBJECT
 
 public:
-    MandelbrotSet(): QObject(), mathEval_(0), defaultPalette(true) {
+    MandelbrotSet(): QObject(), mathEval_(0), defaultPalette(true), inUse(false) {
         colorPalette_=new QImage(256,1,QImage::Format_RGB32);
         for(int i=0;i<256;++i)
             ((unsigned long*)colorPalette_->scanLine(0))[i]=(unsigned long)qRgb(i,i,0);
@@ -32,6 +32,7 @@ private:
     MathEval<Complex>* mathEval_;
     QImage* colorPalette_;
     bool defaultPalette;
+    bool inUse;
 };
 
 #endif // MANDELBROTSET_H
