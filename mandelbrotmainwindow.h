@@ -25,6 +25,9 @@ public:
     ~MandelbrotMainWindow();
 signals:
     void renderMandelbrot(double xCenter,double yCenter, int width, int height, double scale, int nIterations, double limit);
+    void renderJulia(double xCenter,double yCenter, int width, int height, double scale, int nIterations, double limit, double cRe, double cIm);
+    void parseFormula(QString strFormula);
+    void setColorPalette(QImage palette);
 public slots:
     void updateMandelbrotImage(QImage image);
 protected:
@@ -39,12 +42,11 @@ private slots:
 private:
     void renderMandelbrot();
     void renderJulia();
+    void updateCoordinatesUI();
     Ui::MandelbrotMainWindow *ui;
     QThread renderThread;
     QGraphicsPixmapItem mandelbrotPixmapItem;
     QPixmap pixmap;
-    MathParser<Complex> parser;
-    MathEval<Complex> eval;
     MandelbrotSet mandelbrotSet;
     bool added;
     QGraphicsScene scene;
@@ -52,14 +54,13 @@ private:
     double scale;
     double limit;
     int nIterations;
-    QImage palette;
 };
 
 class ScrollableGraphicsView : public QGraphicsView
 {
     Q_OBJECT
 public:
-    ScrollableGraphicsView(QWidget *parent=0):QGraphicsView(parent) {}
+    ScrollableGraphicsView(QWidget *parent=0):QGraphicsView(parent),minZoomWidth(10),minZoomHeight(10) {}
 signals:
     void updateOffsetDrag(QPoint dOffset);
     void updateOffsetRelease(QPoint dOffset);
@@ -73,8 +74,8 @@ private:
     QPoint dragClickPos;
     QPoint zoomClickPos;
     QGraphicsRectItem zoomRect;
-    int minZoomWidth=20;
-    int minZoomHeight=20;
+    int minZoomWidth;
+    int minZoomHeight;
 };
 
 #endif // MANDELBROTMAINWINDOW_H
