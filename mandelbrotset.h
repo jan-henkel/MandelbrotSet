@@ -12,27 +12,27 @@ class MandelbrotSet : public QObject
     Q_OBJECT
 
 public:
-    MandelbrotSet(): QObject(), mathEval_(0), defaultPalette(true), inUse(false) {
-        colorPalette_=new QImage(256,1,QImage::Format_RGB32);
-        for(int i=0;i<256;++i)
-            ((unsigned long*)colorPalette_->scanLine(0))[i]=(unsigned long)qRgb(i,i,0);
+    MandelbrotSet(): QObject(), parseOk_(false) {
+        setDefaultPalette();
+        parser_.setMathEval(&eval_);
     }
-    MandelbrotSet(MathEval<Complex>* mathEval, QImage* colorPalette): mathEval_(mathEval), colorPalette_(colorPalette), defaultPalette(false) {}
     ~MandelbrotSet() {}
-    void setMathEval(MathEval<Complex>* mathEval) {mathEval_=mathEval;}
-    void setColorPalette(QImage* colorPalette) {colorPalette_=colorPalette; defaultPalette=false;}
 public slots:
     void renderMandelbrot(double xCenter,double yCenter, int width, int height, double scale, int nIterations, double limit);
-    void renderJulia(double xCenter,double yCenter, int width, int height, double scale, int nIterations, double limit, Complex cJulia);
-
+    void renderJulia(double xCenter,double yCenter, int width, int height, double scale, int nIterations, double limit, double cRe, double cIm);
+    void setColorPalette(QImage colorPalette) {colorPalette_=colorPalette;}
+    void parseFormula(QString str) {parser_.setString(str); if(!(parseOk_=parser_.parse())) emit parseErrorOut();}
 signals:
     void imageOut(QImage image);
-
+    void parseErrorOut();
 private:
-    MathEval<Complex>* mathEval_;
-    QImage* colorPalette_;
-    bool defaultPalette;
-    bool inUse;
+    void setDefaultPalette() {colorPalette_=QImage(256,1,QImage::Format_RGB32);
+                              for(int i=0;i<256;++i)
+                                  ((unsigned long*)colorPalette_.scanLine(0))[i]=(unsigned long)qRgb(i,i,0);}
+    MathParser<Complex> parser_;
+    MathEval<Complex> eval_;
+    QImage colorPalette_;
+    bool parseOk_;
 };
 
 #endif // MANDELBROTSET_H

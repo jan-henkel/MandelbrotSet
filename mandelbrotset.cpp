@@ -9,20 +9,15 @@ QRgb colorInterp(QColor col1,QColor col2,double r)
 
 void MandelbrotSet::renderMandelbrot(double xCenter, double yCenter, int width, int height, double scale, int nIterations, double limit)
 {
-    if(inUse)
-    {
-        QMessageBox msgBox;
-        msgBox.setText("Already in use!");
-        msgBox.exec();
-    }
-    inUse=true;
+    if(!parseOk_)
+        return;
     int halfWidth=width/2;
     int halfHeight=height/2;
     QImage image(width,height,QImage::Format_RGB32);
-    int palettewidth=colorPalette_->width();
-    int paletteheight=colorPalette_->height();
-    unsigned long *palette=reinterpret_cast<unsigned long*>(colorPalette_->scanLine(0));
-    Complex *ec=mathEval_->getVarPtr('c'),*ex=mathEval_->getVarPtr('x');
+    int palettewidth=colorPalette_.width();
+    //int paletteheight=colorPalette_.height();
+    unsigned long *palette=reinterpret_cast<unsigned long*>(colorPalette_.scanLine(0));
+    Complex *ec=eval_.getVarPtr('c'),*ex=eval_.getVarPtr('x');
     for(int iy=0;iy<height;++iy)
     {
         unsigned long *scanline=reinterpret_cast<unsigned long*>(image.scanLine(iy));
@@ -36,40 +31,42 @@ void MandelbrotSet::renderMandelbrot(double xCenter, double yCenter, int width, 
             int it=0;
             while(it<nIterations && ex->norm2()<=limit)
             {
-                mathEval_->run();
-                *ex=mathEval_->result();
+                eval_.run();
+                *ex=eval_.result();
                 ++it;
             }
             if(it==nIterations)
                 scanline[ix]=palette[0];
             else
             {
-                double dIt=it+1-log(log(ex->norm2())/2/log(2))/log(2);
+                double dItF=1-log(log(ex->norm2())/2/log(2))/log(2);
+                dItF=dItF<0?0:dItF;
+                double dIt=it+dItF;
                 int iIt=(int)dIt;
                 double r=dIt-iIt;
                 QColor col1=QColor(palette[1+(iIt*(palettewidth-1)/nIterations)%(palettewidth-1)]);
                 QColor col2=QColor(palette[1+((iIt+1)*(palettewidth-1)/nIterations)%(palettewidth-1)]);
                 scanline[ix]=colorInterp(col1,col2,r);
-                //scanline[ix]=palette[1+(it*(palettewidth-1)/nIterations)%(palettewidth-1)+(((int)(sqrt((ex->norm2()-limit)/limit)*paletteheight/4))%paletteheight)*palettewidth];
             }
         }
     }
 
     emit imageOut(image);
-    inUse=false;
 }
 
-void MandelbrotSet::renderJulia(double xCenter, double yCenter, int width, int height, double scale, int nIterations, double limit, Complex cJulia)
+void MandelbrotSet::renderJulia(double xCenter, double yCenter, int width, int height, double scale, int nIterations, double limit, double cRe, double cIm)
 {
+    if(!parseOk_)
+        return;
     int halfWidth=width/2;
     int halfHeight=height/2;
     QImage image(width,height,QImage::Format_RGB32);
 
-    int palettewidth=colorPalette_->width();
-    int paletteheight=colorPalette_->height();
-    unsigned long *palette=reinterpret_cast<unsigned long*>(colorPalette_->scanLine(0));
-    Complex *ec=mathEval_->getVarPtr('c'),*ex=mathEval_->getVarPtr('x');
-    *ec=cJulia;
+    int palettewidth=colorPalette_.width();
+    int paletteheight=colorPalette_.height();
+    unsigned long *palette=reinterpret_cast<unsigned long*>(colorPalette_.scanLine(0));
+    Complex *ec=eval_.getVarPtr('c'),*ex=eval_.getVarPtr('x');
+    *ec=Complex(cRe,cIm);
     for(int iy=0;iy<height;++iy)
     {
         unsigned long *scanline=reinterpret_cast<unsigned long*>(image.scanLine(iy));
@@ -82,8 +79,8 @@ void MandelbrotSet::renderJulia(double xCenter, double yCenter, int width, int h
             int it=0;
             while(it<nIterations && ex->norm2()<=limit)
             {
-                mathEval_->run();
-                *ex=mathEval_->result();
+                eval_.run();
+                *ex=eval_.result();
                 ++it;
             }
             if(it==nIterations)
