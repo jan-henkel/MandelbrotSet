@@ -8,9 +8,9 @@ MandelbrotMainWindow::MandelbrotMainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MandelbrotMainWindow),
     added(false),
-    scale(DefaultScale),
     centerX(DefaultCenterX),
     centerY(DefaultCenterY),
+    scale(DefaultScale),
     nIterations(100)
 {
     mandelbrotSet.moveToThread(&renderThread);
@@ -32,6 +32,7 @@ MandelbrotMainWindow::MandelbrotMainWindow(QWidget *parent) :
 
 MandelbrotMainWindow::~MandelbrotMainWindow()
 {
+    renderThread.terminate();
     scene.removeItem(&mandelbrotPixmapItem);
     delete ui;
 }
