@@ -65,3 +65,29 @@ Complex tan(const Complex c)
 {
     return sin(c)/cos(c);
 }
+
+Complex log(Complex c)
+{
+    double n=c.norm();
+    double r=log(n);
+    double i=(c.I()<0?-1:1)*acos(c.R()/n);
+    return Complex(r,i);
+}
+
+Complex sqrt(Complex c)
+{
+    double x=c.norm();
+    return Complex(sqrt((c.R()+x)/2.),sqrt((-c.R()+x)/2.));
+}
+
+Complex Re(Complex c)
+{
+    c.setI(0);
+    return c;
+}
+
+Complex Im(Complex c)
+{
+    c.setR(0);
+    return c;
+}

@@ -2,7 +2,7 @@
 #define MATHPARSER_H
 #define STACKSIZE 256
 #define INSTRUCTIONLISTSIZE 256
-#define NUMFUNC 5
+#define NUMFUNC 9
 #define NUMOP 5
 #include <stdio.h>
 #include <string.h>
@@ -15,9 +15,12 @@ typedef QChar Char;
 extern Char op[NUMOP];
 extern String funcName[NUMFUNC];
 extern int funcNumArgs[NUMFUNC];
-enum Instruction{PUSHVAR,PUSHVAL,ADD,PVARADD,PVALADD,SUB,PVARSUB,PVALSUB,MULT,PVARMULT,PVALMULT,DIV,PVARDIV,PVALDIV,INV,PVARINV,PVALINV,POW_N,PVARPOW_N,PVALPOW_N,POW,PVARPOW,PVALPOW,SIN,PVARSIN,PVALSIN,COS,PVARCOS,PVALCOS,TAN,PVARTAN,PVALTAN,EXP,PVAREXP,PVALEXP};
+enum Instruction{PUSHVAR,PUSHVAL,ADD,PVARADD,PVALADD,SUB,PVARSUB,PVALSUB,MULT,PVARMULT,PVALMULT,DIV,PVARDIV,PVALDIV,INV,PVARINV,PVALINV,POW_N,PVARPOW_N,PVALPOW_N,POW,PVARPOW,PVALPOW,SIN,PVARSIN,PVALSIN,COS,PVARCOS,PVALCOS,TAN,PVARTAN,PVALTAN,EXP,PVAREXP,PVALEXP,LOG,PVARLOG,PVALLOG,RE,PVARRE,PVALRE,IM,PVARIM,PVALIM,SQRT,PVARSQRT,PVALSQRT};
 extern int opcode[NUMOP];
 extern int funcCode[NUMFUNC];
+
+extern double Re(double);
+extern double Im(double);
 
 template <class C>
 class MathEval
@@ -144,6 +147,42 @@ public:
         case PVALEXP:
             {pvalexp_();}
             break;
+        case LOG:
+            {log_();}
+            break;
+        case PVARLOG:
+            {pvarlog_();}
+            break;
+        case PVALLOG:
+            {pvallog_();}
+            break;
+        case RE:
+            {re_();}
+            break;
+        case PVARRE:
+            {pvarre_();}
+            break;
+        case PVALRE:
+            {pvalre_();}
+            break;
+        case IM:
+            {im_();}
+            break;
+        case PVARIM:
+            {pvarim_();}
+            break;
+        case PVALIM:
+            {pvalim_();}
+            break;
+        case SQRT:
+            {sqrt_();}
+            break;
+        case PVARSQRT:
+            {pvarsqrt_();}
+            break;
+        case PVALSQRT:
+            {pvalsqrt_();}
+            break;
         }
     }
     inline void pushvar_() {pushVar(readInt());}
@@ -181,6 +220,18 @@ public:
     inline virtual void exp_() {stack[stackPos-1]=exp(stack[stackPos-1]);}
     inline virtual void pvarexp_(){stack[stackPos++]=exp(readVar());}
     inline virtual void pvalexp_(){stack[stackPos++]=exp(readVal());}
+    inline virtual void log_() {stack[stackPos-1]=log(stack[stackPos-1]);}
+    inline virtual void pvarlog_(){stack[stackPos++]=log(readVar());}
+    inline virtual void pvallog_(){stack[stackPos++]=log(readVal());}
+    inline virtual void re_() {stack[stackPos-1]=Re(stack[stackPos-1]);}
+    inline virtual void pvarre_(){stack[stackPos++]=Re(readVar());}
+    inline virtual void pvalre_(){stack[stackPos++]=Re(readVal());}
+    inline virtual void im_() {stack[stackPos-1]=Im(stack[stackPos-1]);}
+    inline virtual void pvarim_(){stack[stackPos++]=Im(readVar());}
+    inline virtual void pvalim_(){stack[stackPos++]=Im(readVal());}
+    inline virtual void sqrt_() {stack[stackPos-1]=sqrt(stack[stackPos-1]);}
+    inline virtual void pvarsqrt_(){stack[stackPos++]=sqrt(readVar());}
+    inline virtual void pvalsqrt_(){stack[stackPos++]=sqrt(readVal());}
     inline void read(void* dst,int size){memcpy(dst,dataptr,size); dataptr+=size;}
     inline void write(void* src,int size){memcpy(dataptr,src,size);dataptr+=size;}
     inline C readVal(){C val=*(reinterpret_cast<C*>(dataptr)); dataptr+=sizeof(C); return val;}
