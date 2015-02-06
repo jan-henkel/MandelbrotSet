@@ -19,6 +19,10 @@ public:
     friend Complex cos(const Complex c);
     friend Complex tan(const Complex c);
     friend Complex pow(const Complex a,const Complex b);
+    friend Complex log(Complex c);
+    friend Complex Re(Complex c);
+    friend Complex Im(Complex c);
+    friend Complex sqrt(Complex c);
     Complex();
     Complex(double fr):fR(fr),fI(0){}
     Complex(double fr,double fi):fR(fr),fI(fi){}

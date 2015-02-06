@@ -12,6 +12,8 @@
 #include "mandelbrotset.h"
 #include "mathparser.h"
 #include "complex.h"
+#include <map>
+#include <utility>
 namespace Ui {
 class MandelbrotMainWindow;
 }
@@ -24,12 +26,17 @@ public:
     explicit MandelbrotMainWindow(QWidget *parent = 0);
     ~MandelbrotMainWindow();
 signals:
-    void renderMandelbrot(double xCenter,double yCenter, int width, int height, double scale, int nIterations, double limit);
-    void renderJulia(double xCenter,double yCenter, int width, int height, double scale, int nIterations, double limit, double cRe, double cIm);
-    void parseFormula(QString strFormula);
+    void renderMandelbrot(double xCenter,double yCenter, int width, int height, double scale, int nIterations, double limit, int nPasses);
+    void renderJulia(double xCenter,double yCenter, int width, int height, double scale, int nIterations, double limit, int nPasses, double cRe, double cIm);
+    void parseFormula(QString formula);
+    void parsePaletteXFormula(QString formula);
+    void parsePaletteYFormula(QString formula);
     void setColorPalette(QImage palette);
+    void setCol0Interior(bool b);
+    void setRow0Interior(bool b);
 public slots:
-    void updateMandelbrotImage(QImage image);
+    void updateImage(QImage image);
+    void receiveErrorCode(int errorCode);
 protected:
     virtual void resizeEvent(QResizeEvent *e);
 private slots:
@@ -37,23 +44,42 @@ private slots:
     void updateImageOffsetRelease(QPoint newOffset);
     void updateImageViewRect(QRectF viewRect);
     void on_setColorPalettePushButton_clicked();
-    void on_generateMandelbrotPushButton_clicked();
+    void on_nameComboBox_activated(const QString &str);
+    void on_colorSchemeToolButton_clicked();
+    void on_saveConfigPushButton_clicked();
+    void on_saveImagePushButton_clicked();
+    void on_restoreConfigPushButton_clicked();
+    void on_deleteConfigPushButton_clicked();
+    void on_applyPushButton_clicked();
+    void on_mandelbrotRadioButton_toggled(bool checked);
 
 private:
+    void renderImage();
     void renderMandelbrot();
     void renderJulia();
-    void updateCoordinatesUI();
+    void updateConfigUI();
+    int setConfigToUIContents();
+
+    void applyConfig();
+    void saveConfig();
+    void restoreConfig();
+    void deleteConfig();
+    void selectColorPalette();
+    void saveImage();
+
+    void readConfigs();
+    void writeConfigs();
     Ui::MandelbrotMainWindow *ui;
+    const QString STANDARD_CONFIG_NAME;
+    const MandelbrotConfig STANDARD_CONFIG;
+    std::map<QString,MandelbrotConfig> configurations;
+    std::pair<QString,MandelbrotConfig> currentConfig;
     QThread renderThread;
     QGraphicsPixmapItem mandelbrotPixmapItem;
     QPixmap pixmap;
     MandelbrotSet mandelbrotSet;
-    bool added;
     QGraphicsScene scene;
-    double centerX,centerY;
-    double scale;
-    double limit;
-    int nIterations;
+    bool uiChanged;
 };
 
 class ScrollableGraphicsView : public QGraphicsView
