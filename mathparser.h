@@ -368,7 +368,7 @@ private:
     {
         if((str[pos]>='0' && str[pos]<='9')||str[pos]=='-')
             return parseFloatNumber(pos);
-        else if(str[pos]>='a' && str[pos]<='z')
+        else if(str[pos].toLower()>='a' && str[pos].toLower()<='z')
         {
             if(pos<str.length()-1 && str[pos+1]>='a' && str[pos+1]<='z')
                 return parseFunc(pos);
@@ -425,7 +425,7 @@ private:
     }
     int parseVar(int pos)
     {
-        char c=str[pos].toLatin1();
+        char c=str[pos].toLower().toLatin1();
         mathEval->writeInstr(PUSHVAR);
         mathEval->writeInt((int)(c-'a'));
         return 1;
@@ -433,7 +433,7 @@ private:
     int parseFunc(int pos)
     {
         int newpos=pos;
-        while(str[newpos]>='a' && str[newpos]<='z')
+        while(str[newpos].toLower()>='a' && str[newpos].toLower()<='z')
             ++newpos;
         if(str[newpos]!='(')
             return 0;

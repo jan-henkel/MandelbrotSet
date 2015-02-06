@@ -22,7 +22,10 @@ void MandelbrotSet::renderMandelbrot(double xCenter, double yCenter, int width, 
     int paletteWidth=colorPalette_.width();
     int paletteHeight=colorPalette_.height();
     unsigned long *palette=reinterpret_cast<unsigned long*>(colorPalette_.scanLine(0));
+    //z=z(n), c=Complex(x,y) with coordinates x and y on the complex plane corresponding to points of the image
     Complex *ec=eval_.getVarPtr('c'),*ez=eval_.getVarPtr('z');
+    //imaginary unit i
+    (*eval_.getVarPtr('i'))=Complex(0.0,1.0);
     //s=Re(z), t=Im(z) when iteration loop is done
     double *e1s=paletteXeval_.getVarPtr('s'), *e1t=paletteXeval_.getVarPtr('t');
     double *e2s=paletteYeval_.getVarPtr('s'), *e2t=paletteYeval_.getVarPtr('t');
@@ -42,6 +45,7 @@ void MandelbrotSet::renderMandelbrot(double xCenter, double yCenter, int width, 
     *e1h=*e2h=(double)paletteHeight;
     col0Interior_&=(paletteWidth>1);
     row0Interior_&=(paletteHeight>1);
+    const int upperLimit=(1<<(sizeof(int)*8-2));
     for(int pass=0;pass<nPasses;++pass)
     {
         int nIt=nIterations>>(2*(nPasses-pass-1));
@@ -73,8 +77,8 @@ void MandelbrotSet::renderMandelbrot(double xCenter, double yCenter, int width, 
                 paletteYeval_.run();
                 xPal=paletteXeval_.result();
                 yPal=paletteYeval_.result();
-                xPal=(xPal<0)?0:xPal;
-                yPal=(yPal<0)?0:yPal;
+                xPal=(xPal<0 || xPal>upperLimit)?0:xPal;
+                yPal=(yPal<0 || yPal>upperLimit)?0:yPal;
                 ixPal=(int)xPal;
                 iyPal=(int)yPal;
                 int index[4];
@@ -124,6 +128,8 @@ void MandelbrotSet::renderJulia(double xCenter, double yCenter, int width, int h
     int paletteHeight=colorPalette_.height();
     unsigned long *palette=reinterpret_cast<unsigned long*>(colorPalette_.scanLine(0));
     Complex *ec=eval_.getVarPtr('c'),*ez=eval_.getVarPtr('z');
+    //imaginary unit i
+    (*eval_.getVarPtr('i'))=Complex(0.0,1.0);
     //s=Re(z), t=Im(z) when iteration loop is done
     double *e1s=paletteXeval_.getVarPtr('s'), *e1t=paletteXeval_.getVarPtr('t');
     double *e2s=paletteYeval_.getVarPtr('s'), *e2t=paletteYeval_.getVarPtr('t');
@@ -137,6 +143,7 @@ void MandelbrotSet::renderJulia(double xCenter, double yCenter, int width, int h
     double *e1w=paletteXeval_.getVarPtr('w'), *e1h=paletteXeval_.getVarPtr('h');
     double *e2w=paletteYeval_.getVarPtr('w'), *e2h=paletteYeval_.getVarPtr('h');
 
+    const int upperLimit=(1<<(sizeof(int)*8-2));
     *e1m=*e2m=nIterations;
     *e1l=*e2l=limit;
     *e1w=*e2w=(double)paletteWidth;
@@ -174,8 +181,8 @@ void MandelbrotSet::renderJulia(double xCenter, double yCenter, int width, int h
                 paletteYeval_.run();
                 xPal=paletteXeval_.result();
                 yPal=paletteYeval_.result();
-                xPal=(xPal<0)?0:xPal;
-                yPal=(yPal<0)?0:yPal;
+                xPal=(xPal<0 || xPal>upperLimit)?0:xPal;
+                yPal=(yPal<0 || yPal>upperLimit)?0:yPal;
                 ixPal=(int)xPal;
                 iyPal=(int)yPal;
                 int index[4];

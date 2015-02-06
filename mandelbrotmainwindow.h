@@ -45,7 +45,6 @@ private slots:
     void updateImageViewRect(QRectF viewRect);
     void on_setColorPalettePushButton_clicked();
     void on_nameComboBox_activated(const QString &str);
-    void on_colorSchemeToolButton_clicked();
     void on_saveConfigPushButton_clicked();
     void on_saveImagePushButton_clicked();
     void on_restoreConfigPushButton_clicked();

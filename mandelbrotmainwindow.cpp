@@ -47,6 +47,7 @@ MandelbrotMainWindow::MandelbrotMainWindow(QWidget *parent) :
     currentConfig.second=STANDARD_CONFIG;
     configurations[STANDARD_CONFIG_NAME]=STANDARD_CONFIG;
     updateConfigUI();
+    ui->nameComboBox->setCurrentText(STANDARD_CONFIG_NAME);
 }
 
 MandelbrotMainWindow::~MandelbrotMainWindow()
@@ -79,10 +80,11 @@ void MandelbrotMainWindow::readConfigs()
     QTextStream in(&file);
     ui->nameComboBox->clear();
     ui->nameComboBox->setInsertPolicy(QComboBox::InsertAlphabetically);
-    while(!file.atEnd())
+    QString name;
+    MandelbrotConfig config;
+    while(!in.atEnd())
     {
-        QString name=in.readLine();
-        MandelbrotConfig config;
+        name=in.readLine();
         config.formula=in.readLine();
         config.limit=in.readLine().toDouble();
         config.centerX=in.readLine().toDouble();
@@ -307,19 +309,6 @@ void MandelbrotMainWindow::on_nameComboBox_activated(const QString &str)
     updateConfigUI();
 }
 
-void MandelbrotMainWindow::on_colorSchemeToolButton_clicked()
-{
-    bool b=ui->colorPaletteGraphicsView->isVisible();
-    ui->colorPaletteGraphicsView->setVisible(!b);
-    ui->paletteFormulaXLineEdit->setVisible(!b);
-    ui->paletteXFormulaLabel->setVisible(!b);
-    ui->paletteFormulaYLineEdit->setVisible(!b);
-    ui->paletteYFormulaLabel->setVisible(!b);
-    ui->row0CheckBox->setVisible(!b);
-    ui->col0CheckBox->setVisible(!b);
-    ui->colorSchemeToolButton->setArrowType(b?Qt::DownArrow:Qt::UpArrow);
-}
-
 void MandelbrotMainWindow::saveImage()
 {
     QString fileName=QFileDialog::getSaveFileName(0,"Save image");
@@ -330,10 +319,14 @@ void MandelbrotMainWindow::saveImage()
 void MandelbrotMainWindow::saveConfig()
 {
     setConfigToUIContents();
-    configurations.insert(currentConfig);
-    ui->nameComboBox->setInsertPolicy(QComboBox::InsertAlphabetically);
-    ui->nameComboBox->addItem(ui->nameComboBox->currentText());
-    ui->nameComboBox->setInsertPolicy(QComboBox::NoInsert);
+    currentConfig.first=ui->nameComboBox->currentText();
+    if(configurations.find(currentConfig.first)==configurations.end())
+    {
+        ui->nameComboBox->setInsertPolicy(QComboBox::InsertAlphabetically);
+        ui->nameComboBox->addItem(currentConfig.first);
+        ui->nameComboBox->setInsertPolicy(QComboBox::NoInsert);
+    }
+    configurations[currentConfig.first]=currentConfig.second;
     writeConfigs();
 }
 
@@ -378,7 +371,7 @@ void MandelbrotMainWindow::on_deleteConfigPushButton_clicked()
 void MandelbrotMainWindow::applyConfig()
 {
     setConfigToUIContents();
-    parseFormula(currentConfig.second.formula);
+    emit parseFormula(currentConfig.second.formula);
     emit parsePaletteXFormula(currentConfig.second.paletteFormulaX);
     emit parsePaletteYFormula(currentConfig.second.paletteFormulaY);
     emit setCol0Interior(currentConfig.second.col0interior);
