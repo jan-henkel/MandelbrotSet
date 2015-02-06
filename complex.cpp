@@ -88,6 +88,7 @@ Complex Re(Complex c)
 
 Complex Im(Complex c)
 {
-    c.setR(0);
+    c.setR(c.I());
+    c.setI(0);
     return c;
 }

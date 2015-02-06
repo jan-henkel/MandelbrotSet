@@ -33,7 +33,6 @@ class MandelbrotSet : public QObject
 public:
     enum ErrorCodes {FORMULA_PARSE_ERROR=1,PALETTE_XFORMULA_PARSE_ERROR=2,PALETTE_YFORMULA_PARSE_ERROR=4};
     MandelbrotSet(): QObject(), errorCode_(0) {
-        setDefaultPalette();
         parser_.setMathEval(&eval_);
         paletteXparser_.setMathEval(&paletteXeval_);
         paletteYparser_.setMathEval(&paletteYeval_);
@@ -52,9 +51,6 @@ signals:
     void imageOut(QImage image);
     void errorCodeOut(int errorCode);
 private:
-    void setDefaultPalette() {colorPalette_=QImage(256,1,QImage::Format_RGB32);
-                              for(int i=0;i<256;++i)
-                                  ((unsigned long*)colorPalette_.scanLine(0))[i]=(unsigned long)qRgb(i,i,0);}
     MathParser<Complex> parser_;
     MathParser<double> paletteXparser_;
     MathParser<double> paletteYparser_;
