@@ -53,8 +53,14 @@
       <property name="horizontalScrollBarPolicy">
        <enum>Qt::ScrollBarAlwaysOff</enum>
       </property>
+      <property name="interactive">
+       <bool>false</bool>
+      </property>
       <property name="alignment">
        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+      </property>
+      <property name="dragMode">
+       <enum>QGraphicsView::NoDrag</enum>
       </property>
      </widget>
     </item>

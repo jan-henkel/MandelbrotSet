@@ -14,6 +14,7 @@
 #include "complex.h"
 #include <map>
 #include <utility>
+#include <QTimer>
 namespace Ui {
 class MandelbrotMainWindow;
 }
@@ -51,7 +52,7 @@ private slots:
     void on_deleteConfigPushButton_clicked();
     void on_applyPushButton_clicked();
     void on_mandelbrotRadioButton_toggled(bool checked);
-
+    void resizeTimerExpired();
 private:
     void renderImage();
     void renderMandelbrot();
@@ -60,6 +61,7 @@ private:
     int setConfigToUIContents();
     void generateDefaultPalette();
 
+    void addConfig(QString name,const MandelbrotConfig& config);
     void applyConfig();
     void saveConfig();
     void restoreConfig();
@@ -70,10 +72,17 @@ private:
     void readConfigs();
     void writeConfigs();
     Ui::MandelbrotMainWindow *ui;
-    const QString STANDARD_CONFIG_NAME;
-    const MandelbrotConfig STANDARD_CONFIG;
+
+    //configurations for standard Mandelbrot set
+    static const QString STANDARD_CONFIG_NAME;
+    static const MandelbrotConfig STANDARD_CONFIG;
+    //modified coloring formula to reduce banding
+    static const QString STANDARD_CONFIG_SMOOTH_COLORING_NAME;
+    static const MandelbrotConfig STANDARD_CONFIG_SMOOTH_COLORING;
+
     std::map<QString,MandelbrotConfig> configurations;
-    std::pair<QString,MandelbrotConfig> currentConfig;
+    QString currentConfigName;
+    MandelbrotConfig currentConfig;
     QThread renderThread;
     QGraphicsPixmapItem mandelbrotPixmapItem;
     QPixmap pixmap;
@@ -81,6 +90,7 @@ private:
     MandelbrotSet mandelbrotSet;
     QGraphicsScene scene;
     bool uiChanged;
+    QTimer resizeTimer;
 };
 
 class ScrollableGraphicsView : public QGraphicsView
@@ -92,6 +102,7 @@ signals:
     void updateOffsetDrag(QPoint dOffset);
     void updateOffsetRelease(QPoint dOffset);
     void updateViewRect(QRectF);
+    void clickEvent(QMouseEvent *event);
 protected:
     void mousePressEvent(QMouseEvent *event);
     void mouseMoveEvent(QMouseEvent *event);

@@ -3,30 +3,50 @@
 #include <QFile>
 #include <QTextStream>
 
+const QString MandelbrotMainWindow::STANDARD_CONFIG_NAME="Standard Mandelbrot";
+const MandelbrotConfig MandelbrotMainWindow::STANDARD_CONFIG=
+        {"z^2+c",       //formula
+        4.0,            //limit
+        -0.637011f,     //centerX
+        -0.0395159f,    //centerY
+        0.00403897f,    //scale
+        100,            //nIterations
+        "",             //colorPaletteFileName
+        "n/m*(w-1)",    //paletteFormulaX
+        true,           //col0interior
+        "0",            //paletteFormulaY
+        false,          //row0interior
+        false,          //julia
+        0.0,            //juliaRe
+        0.0             //juliaIm
+        };
+const QString MandelbrotMainWindow::STANDARD_CONFIG_SMOOTH_COLORING_NAME="Standard Mandelbrot (smooth coloring)";
+const MandelbrotConfig MandelbrotMainWindow::STANDARD_CONFIG_SMOOTH_COLORING=
+        {"z^2+c",                                           //formula
+        4.0,                                                //limit
+        -0.637011f,                                         //centerX
+        -0.0395159f,                                        //centerY
+        0.00403897f,                                        //scale
+        100,                                                //nIterations
+        "",                                                 //colorPaletteFileName
+        "(n+1-log(log(s^2+t^2)/log(4))/log(2))/m*(w-1)",    //paletteFormulaX
+        true,                                               //col0interior
+        "0",                                                //paletteFormulaY
+        false,                                              //row0interior
+        false,                                              //julia
+        0.0,                                                //juliaRe
+        0.0                                                 //juliaIm
+        };
+
+
 MandelbrotMainWindow::MandelbrotMainWindow(QWidget *parent) :
     QMainWindow(parent),
-    ui(new Ui::MandelbrotMainWindow),
-    STANDARD_CONFIG_NAME("Standard Mandelbrot"),
-    STANDARD_CONFIG({"z^2+c",       //formula
-                    4.0,            //limit
-                    -0.637011f,     //centerX
-                    -0.0395159f,    //centerY
-                    0.00403897f,    //scale
-                    100,            //nIterations
-                    "",             //colorPaletteFileName
-                    "n/m*(w-1)",    //paletteFormulaX
-                    true,           //col0interior
-                    "0",            //paletteFormulaY
-                    false,          //row0interior
-                    false,          //julia
-                    0.0,            //juliaRe
-                    0.0             //juliaIm
-                    })
+    ui(new Ui::MandelbrotMainWindow)
 {
     mandelbrotSet.moveToThread(&renderThread);
     renderThread.start();
     ui->setupUi(this);
-
+    resizeTimer.setSingleShot(true);
     generateDefaultPalette();
     mandelbrotPixmapItem.setPixmap(pixmap);
     scene.setSceneRect(0,0,ui->mandelbrotGraphicsView->width(),ui->mandelbrotGraphicsView->height());
@@ -36,6 +56,7 @@ MandelbrotMainWindow::MandelbrotMainWindow(QWidget *parent) :
     QObject::connect(ui->mandelbrotGraphicsView,SIGNAL(updateOffsetDrag(QPoint)),this,SLOT(updateImageOffsetDrag(QPoint)));
     QObject::connect(ui->mandelbrotGraphicsView,SIGNAL(updateOffsetRelease(QPoint)),this,SLOT(updateImageOffsetRelease(QPoint)));
     QObject::connect(ui->mandelbrotGraphicsView,SIGNAL(updateViewRect(QRectF)),this,SLOT(updateImageViewRect(QRectF)));
+    QObject::connect(&resizeTimer,SIGNAL(timeout()),this,SLOT(resizeTimerExpired()));
     QObject::connect(this,SIGNAL(renderMandelbrot(double,double,int,int,double,int,double,int)),&mandelbrotSet,SLOT(renderMandelbrot(double,double,int,int,double,int,double,int)),Qt::QueuedConnection);
     QObject::connect(this,SIGNAL(renderJulia(double,double,int,int,double,int,double,int,double,double)),&mandelbrotSet,SLOT(renderJulia(double,double,int,int,double,int,double,int,double,double)),Qt::QueuedConnection);
     QObject::connect(this,SIGNAL(parseFormula(QString)),&mandelbrotSet,SLOT(parseFormula(QString)),Qt::QueuedConnection);
@@ -45,13 +66,21 @@ MandelbrotMainWindow::MandelbrotMainWindow(QWidget *parent) :
     QObject::connect(this,SIGNAL(setRow0Interior(bool)),&mandelbrotSet,SLOT(setRow0Interior(bool)),Qt::QueuedConnection);
     QObject::connect(this,SIGNAL(setColorPalette(QImage)),&mandelbrotSet,SLOT(setColorPalette(QImage)),Qt::QueuedConnection);
     readConfigs();
-    currentConfig.first=STANDARD_CONFIG_NAME;
-    currentConfig.second=STANDARD_CONFIG;
-    configurations[STANDARD_CONFIG_NAME]=STANDARD_CONFIG;
+    addConfig(STANDARD_CONFIG_NAME,STANDARD_CONFIG);
+    addConfig(STANDARD_CONFIG_SMOOTH_COLORING_NAME,STANDARD_CONFIG_SMOOTH_COLORING);
+    currentConfigName=STANDARD_CONFIG_NAME;
+    currentConfig=STANDARD_CONFIG;
     updateConfigUI();
     ui->nameComboBox->setCurrentText(STANDARD_CONFIG_NAME);
     ui->nameComboBox->setCurrentIndex(ui->nameComboBox->findText(STANDARD_CONFIG_NAME));
     applyConfig();
+}
+
+void MandelbrotMainWindow::addConfig(QString name,const MandelbrotConfig& config)
+{
+    if(configurations.find(name)==configurations.end())
+        ui->nameComboBox->insertItem(std::distance(configurations.begin(),configurations.find(name)),name);
+    configurations[name]=config;
 }
 
 MandelbrotMainWindow::~MandelbrotMainWindow()
@@ -59,6 +88,11 @@ MandelbrotMainWindow::~MandelbrotMainWindow()
     renderThread.terminate();
     scene.removeItem(&mandelbrotPixmapItem);
     delete ui;
+}
+
+void MandelbrotMainWindow::resizeTimerExpired()
+{
+    renderImage();
 }
 
 void MandelbrotMainWindow::updateImageOffsetDrag(QPoint newOffset)
@@ -69,10 +103,10 @@ void MandelbrotMainWindow::updateImageOffsetDrag(QPoint newOffset)
 
 void MandelbrotMainWindow::updateImageOffsetRelease(QPoint newOffset)
 {
-    currentConfig.second.centerX-=currentConfig.second.scale*newOffset.rx();
-    currentConfig.second.centerY-=currentConfig.second.scale*newOffset.ry();
-    ui->xLineEdit->setText(QString::number(currentConfig.second.centerX));
-    ui->yLineEdit->setText(QString::number(currentConfig.second.centerY));
+    currentConfig.centerX-=currentConfig.scale*newOffset.rx();
+    currentConfig.centerY-=currentConfig.scale*newOffset.ry();
+    ui->xLineEdit->setText(QString::number(currentConfig.centerX));
+    ui->yLineEdit->setText(QString::number(currentConfig.centerY));
     renderImage();
 }
 
@@ -84,7 +118,6 @@ void MandelbrotMainWindow::readConfigs()
     configurations.clear();
     QTextStream in(&file);
     ui->nameComboBox->clear();
-    ui->nameComboBox->setInsertPolicy(QComboBox::InsertAlphabetically);
     QString name;
     MandelbrotConfig config;
     while(!in.atEnd())
@@ -104,10 +137,12 @@ void MandelbrotMainWindow::readConfigs()
         config.julia=!!in.readLine().toInt();
         config.juliaRe=in.readLine().toDouble();
         config.juliaIm=in.readLine().toDouble();
-        configurations.insert(std::pair<QString,MandelbrotConfig>(name,config));
-        ui->nameComboBox->addItem(name);
+        if(configurations.find(name)==configurations.end())
+        {
+            configurations[name]=config;
+            ui->nameComboBox->addItem(name);
+        }
     }
-    ui->nameComboBox->setInsertPolicy(QComboBox::NoInsert);
 }
 
 void MandelbrotMainWindow::writeConfigs()
@@ -142,31 +177,31 @@ void MandelbrotMainWindow::writeConfigs()
 
 void MandelbrotMainWindow::updateImageViewRect(QRectF viewRect)
 {
-    currentConfig.second.centerX+=currentConfig.second.scale*(viewRect.x()+viewRect.width()/2-ui->mandelbrotGraphicsView->width()/2);
-    currentConfig.second.centerY+=currentConfig.second.scale*(viewRect.y()+viewRect.height()/2-ui->mandelbrotGraphicsView->height()/2);
-    currentConfig.second.scale*=viewRect.width()/ui->mandelbrotGraphicsView->width();
-    ui->xLineEdit->setText(QString::number(currentConfig.second.centerX));
-    ui->yLineEdit->setText(QString::number(currentConfig.second.centerY));
-    ui->scaleLineEdit->setText(QString::number(currentConfig.second.scale));
+    currentConfig.centerX+=currentConfig.scale*(viewRect.x()+viewRect.width()/2-ui->mandelbrotGraphicsView->width()/2);
+    currentConfig.centerY+=currentConfig.scale*(viewRect.y()+viewRect.height()/2-ui->mandelbrotGraphicsView->height()/2);
+    currentConfig.scale*=viewRect.width()/ui->mandelbrotGraphicsView->width();
+    ui->xLineEdit->setText(QString::number(currentConfig.centerX));
+    ui->yLineEdit->setText(QString::number(currentConfig.centerY));
+    ui->scaleLineEdit->setText(QString::number(currentConfig.scale));
     renderImage();
 }
 
 void MandelbrotMainWindow::updateConfigUI()
 {
-    ui->formulaLineEdit->setText(currentConfig.second.formula);
-    ui->limitLineEdit->setText(QString::number(currentConfig.second.limit));
-    ui->xLineEdit->setText(QString::number(currentConfig.second.centerX));
-    ui->yLineEdit->setText(QString::number(currentConfig.second.centerY));
-    ui->scaleLineEdit->setText(QString::number(currentConfig.second.scale));
-    ui->iterationsLineEdit->setText(QString::number(currentConfig.second.nIterations));
-    ui->paletteFormulaXLineEdit->setText(currentConfig.second.paletteFormulaX);
-    ui->col0CheckBox->setChecked(currentConfig.second.col0interior);
-    ui->paletteFormulaYLineEdit->setText(currentConfig.second.paletteFormulaY);
-    ui->row0CheckBox->setChecked(currentConfig.second.row0interior);
-    ui->mandelbrotRadioButton->setChecked(!currentConfig.second.julia);
-    ui->juliaRadioButton->setChecked(currentConfig.second.julia);
-    ui->juliaXLineEdit->setText(QString::number(currentConfig.second.juliaRe));
-    ui->juliaYLineEdit->setText(QString::number(currentConfig.second.juliaIm));
+    ui->formulaLineEdit->setText(currentConfig.formula);
+    ui->limitLineEdit->setText(QString::number(currentConfig.limit));
+    ui->xLineEdit->setText(QString::number(currentConfig.centerX));
+    ui->yLineEdit->setText(QString::number(currentConfig.centerY));
+    ui->scaleLineEdit->setText(QString::number(currentConfig.scale));
+    ui->iterationsLineEdit->setText(QString::number(currentConfig.nIterations));
+    ui->paletteFormulaXLineEdit->setText(currentConfig.paletteFormulaX);
+    ui->col0CheckBox->setChecked(currentConfig.col0interior);
+    ui->paletteFormulaYLineEdit->setText(currentConfig.paletteFormulaY);
+    ui->row0CheckBox->setChecked(currentConfig.row0interior);
+    ui->mandelbrotRadioButton->setChecked(!currentConfig.julia);
+    ui->juliaRadioButton->setChecked(currentConfig.julia);
+    ui->juliaXLineEdit->setText(QString::number(currentConfig.juliaRe));
+    ui->juliaYLineEdit->setText(QString::number(currentConfig.juliaIm));
     updateColorPalettePreview();
 }
 
@@ -174,31 +209,31 @@ int MandelbrotMainWindow::setConfigToUIContents()
 {
     int errorCode=0;
     bool ok;
-    currentConfig.second.formula=ui->formulaLineEdit->text();
-    currentConfig.second.limit=ui->limitLineEdit->text().toDouble(&ok);
+    currentConfig.formula=ui->formulaLineEdit->text();
+    currentConfig.limit=ui->limitLineEdit->text().toDouble(&ok);
     errorCode<<=1;
     errorCode|=(int)ok;
-    currentConfig.second.centerX=ui->xLineEdit->text().toDouble(&ok);
+    currentConfig.centerX=ui->xLineEdit->text().toDouble(&ok);
     errorCode<<=1;
     errorCode|=(int)ok;
-    currentConfig.second.centerY=ui->yLineEdit->text().toDouble(&ok);
+    currentConfig.centerY=ui->yLineEdit->text().toDouble(&ok);
     errorCode<<=1;
     errorCode|=(int)ok;
-    currentConfig.second.scale=ui->scaleLineEdit->text().toDouble(&ok);
+    currentConfig.scale=ui->scaleLineEdit->text().toDouble(&ok);
     errorCode<<=1;
     errorCode|=(int)ok;
-    currentConfig.second.nIterations=ui->iterationsLineEdit->text().toInt(&ok);
+    currentConfig.nIterations=ui->iterationsLineEdit->text().toInt(&ok);
     errorCode<<=1;
     errorCode|=(int)ok;
-    currentConfig.second.paletteFormulaX=ui->paletteFormulaXLineEdit->text();
-    currentConfig.second.col0interior=ui->col0CheckBox->isChecked();
-    currentConfig.second.paletteFormulaY=ui->paletteFormulaYLineEdit->text();
-    currentConfig.second.row0interior=ui->row0CheckBox->isChecked();
-    currentConfig.second.julia=!ui->mandelbrotRadioButton->isChecked();
-    currentConfig.second.juliaRe=ui->juliaXLineEdit->text().toDouble(&ok);
+    currentConfig.paletteFormulaX=ui->paletteFormulaXLineEdit->text();
+    currentConfig.col0interior=ui->col0CheckBox->isChecked();
+    currentConfig.paletteFormulaY=ui->paletteFormulaYLineEdit->text();
+    currentConfig.row0interior=ui->row0CheckBox->isChecked();
+    currentConfig.julia=!ui->mandelbrotRadioButton->isChecked();
+    currentConfig.juliaRe=ui->juliaXLineEdit->text().toDouble(&ok);
     errorCode<<=1;
     errorCode|=(int)ok;
-    currentConfig.second.juliaIm=ui->juliaYLineEdit->text().toDouble(&ok);
+    currentConfig.juliaIm=ui->juliaYLineEdit->text().toDouble(&ok);
     errorCode<<=1;
     errorCode|=(int)ok;
     return errorCode;
@@ -266,7 +301,7 @@ void MandelbrotMainWindow::updateImage(QImage image)
 
 void MandelbrotMainWindow::renderImage()
 {
-    if(!currentConfig.second.julia)
+    if(!currentConfig.julia)
         renderMandelbrot();
     else
         renderJulia();
@@ -274,11 +309,11 @@ void MandelbrotMainWindow::renderImage()
 
 void MandelbrotMainWindow::renderMandelbrot()
 {
-    emit renderMandelbrot(currentConfig.second.centerX,currentConfig.second.centerY,ui->mandelbrotGraphicsView->width(),ui->mandelbrotGraphicsView->height(),currentConfig.second.scale,currentConfig.second.nIterations,currentConfig.second.limit,2);
+    emit renderMandelbrot(currentConfig.centerX,currentConfig.centerY,ui->mandelbrotGraphicsView->width(),ui->mandelbrotGraphicsView->height(),currentConfig.scale,currentConfig.nIterations,currentConfig.limit,2);
 }
 void MandelbrotMainWindow::renderJulia()
 {
-    emit renderJulia(currentConfig.second.centerX,currentConfig.second.centerY,ui->mandelbrotGraphicsView->width(),ui->mandelbrotGraphicsView->height(),currentConfig.second.scale,currentConfig.second.nIterations,currentConfig.second.limit,2,currentConfig.second.juliaRe,currentConfig.second.juliaIm);
+    emit renderJulia(currentConfig.centerX,currentConfig.centerY,ui->mandelbrotGraphicsView->width(),ui->mandelbrotGraphicsView->height(),currentConfig.scale,currentConfig.nIterations,currentConfig.limit,2,currentConfig.juliaRe,currentConfig.juliaIm);
 }
 
 void MandelbrotMainWindow::generateDefaultPalette()
@@ -291,7 +326,7 @@ void MandelbrotMainWindow::generateDefaultPalette()
 void MandelbrotMainWindow::updateColorPalettePreview()
 {
     QImage colorPalette;
-    if(currentConfig.second.colorPaletteFileName=="" || !colorPalette.load(currentConfig.second.colorPaletteFileName))
+    if(currentConfig.colorPaletteFileName=="" || !colorPalette.load(currentConfig.colorPaletteFileName))
         colorPalette=defaultPalette;
     ui->colorPalettePreviewLabel->setPixmap(QPixmap::fromImage(colorPalette));
 }
@@ -299,7 +334,7 @@ void MandelbrotMainWindow::updateColorPalettePreview()
 void MandelbrotMainWindow::on_setColorPalettePushButton_clicked()
 {
     QString fileName=QFileDialog::getOpenFileName(0,"Select color palette");
-    currentConfig.second.colorPaletteFileName=fileName;
+    currentConfig.colorPaletteFileName=fileName;
     updateColorPalettePreview();
 }
 
@@ -309,7 +344,7 @@ void MandelbrotMainWindow::resizeEvent(QResizeEvent *e)
     QMainWindow::resizeEvent(e);
     scene.setSceneRect(0,0,ui->mandelbrotGraphicsView->width(),ui->mandelbrotGraphicsView->height());
     mandelbrotPixmapItem.setPos(ui->mandelbrotGraphicsView->width()/2-mandelbrotPixmapItem.pixmap().width()/2,ui->mandelbrotGraphicsView->height()/2-mandelbrotPixmapItem.pixmap().height()/2);
-    renderImage();
+    resizeTimer.start(500);
 }
 
 void MandelbrotMainWindow::on_nameComboBox_activated(const QString &str)
@@ -318,10 +353,12 @@ void MandelbrotMainWindow::on_nameComboBox_activated(const QString &str)
         return;
     else
     {
-        currentConfig.first=str;
-        currentConfig.second=configurations[str];
+        currentConfigName=str;
+        currentConfig=configurations[str];
     }
     updateConfigUI();
+    applyConfig();
+    renderImage();
 }
 
 void MandelbrotMainWindow::saveImage()
@@ -333,18 +370,14 @@ void MandelbrotMainWindow::saveImage()
 
 void MandelbrotMainWindow::saveConfig()
 {
-    setConfigToUIContents();
-    currentConfig.first=ui->nameComboBox->currentText();
-    if(configurations.find(currentConfig.first)==configurations.end())
-    {
-        configurations[currentConfig.first]=currentConfig.second;
-        ui->nameComboBox->insertItem(std::distance(configurations.begin(),configurations.find(currentConfig.first)),currentConfig.first);
-    }
+    currentConfigName=ui->nameComboBox->currentText();
+    addConfig(currentConfigName,currentConfig);
     writeConfigs();
 }
 
 void MandelbrotMainWindow::on_saveConfigPushButton_clicked()
 {
+    setConfigToUIContents();
     saveConfig();
 }
 
@@ -355,9 +388,9 @@ void MandelbrotMainWindow::on_saveImagePushButton_clicked()
 
 void MandelbrotMainWindow::restoreConfig()
 {
-    currentConfig.second=configurations[currentConfig.first];
+    currentConfig=configurations[currentConfigName];
     updateConfigUI();
-    ui->nameComboBox->setCurrentText(currentConfig.first);
+    ui->nameComboBox->setCurrentText(currentConfigName);
 }
 
 void MandelbrotMainWindow::on_restoreConfigPushButton_clicked()
@@ -369,15 +402,15 @@ void MandelbrotMainWindow::on_restoreConfigPushButton_clicked()
 
 void MandelbrotMainWindow::deleteConfig()
 {
-    if(currentConfig.first!=STANDARD_CONFIG_NAME)
+    if(currentConfigName!=STANDARD_CONFIG_NAME)
     {
-        configurations.erase(currentConfig.first);
+        configurations.erase(currentConfigName);
         ui->nameComboBox->removeItem(ui->nameComboBox->currentIndex());
-        currentConfig.first=STANDARD_CONFIG_NAME;
-        currentConfig.second=STANDARD_CONFIG;
+        currentConfigName=STANDARD_CONFIG_NAME;
+        currentConfig=STANDARD_CONFIG;
         updateConfigUI();
-        ui->nameComboBox->setCurrentText(currentConfig.first);
-        ui->nameComboBox->setCurrentIndex(ui->nameComboBox->findText(currentConfig.first));
+        ui->nameComboBox->setCurrentText(currentConfigName);
+        ui->nameComboBox->setCurrentIndex(ui->nameComboBox->findText(currentConfigName));
         writeConfigs();
     }
 }
@@ -391,15 +424,15 @@ void MandelbrotMainWindow::on_deleteConfigPushButton_clicked()
 
 void MandelbrotMainWindow::applyConfig()
 {
-    emit parseFormula(currentConfig.second.formula);
+    emit parseFormula(currentConfig.formula);
     QImage colorPalette;
-    if(currentConfig.second.colorPaletteFileName=="" || !colorPalette.load(currentConfig.second.colorPaletteFileName))
+    if(currentConfig.colorPaletteFileName=="" || !colorPalette.load(currentConfig.colorPaletteFileName))
         colorPalette=defaultPalette;
     emit setColorPalette(colorPalette);
-    emit parsePaletteXFormula(currentConfig.second.paletteFormulaX);
-    emit parsePaletteYFormula(currentConfig.second.paletteFormulaY);
-    emit setCol0Interior(currentConfig.second.col0interior);
-    emit setRow0Interior(currentConfig.second.row0interior);
+    emit parsePaletteXFormula(currentConfig.paletteFormulaX);
+    emit parsePaletteYFormula(currentConfig.paletteFormulaY);
+    emit setCol0Interior(currentConfig.col0interior);
+    emit setRow0Interior(currentConfig.row0interior);
 }
 
 void MandelbrotMainWindow::on_applyPushButton_clicked()
@@ -411,7 +444,7 @@ void MandelbrotMainWindow::on_applyPushButton_clicked()
 
 void MandelbrotMainWindow::on_mandelbrotRadioButton_toggled(bool checked)
 {
-    currentConfig.second.julia=!checked;
+    currentConfig.julia=!checked;
     ui->juliaXLabel->setVisible(!checked);
     ui->juliaXLineEdit->setVisible(!checked);
     ui->juliaYLabel->setVisible(!checked);
