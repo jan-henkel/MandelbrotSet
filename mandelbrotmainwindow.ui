@@ -171,7 +171,13 @@
         <widget class="QLabel" name="colorPalettePreviewLabel">
          <property name="minimumSize">
           <size>
-           <width>0</width>
+           <width>250</width>
+           <height>100</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>250</width>
            <height>100</height>
           </size>
          </property>

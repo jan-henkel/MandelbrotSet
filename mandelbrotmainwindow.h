@@ -58,12 +58,13 @@ private:
     void renderJulia();
     void updateConfigUI();
     int setConfigToUIContents();
+    void generateDefaultPalette();
 
     void applyConfig();
     void saveConfig();
     void restoreConfig();
     void deleteConfig();
-    void selectColorPalette();
+    void updateColorPalettePreview();
     void saveImage();
 
     void readConfigs();
@@ -76,6 +77,7 @@ private:
     QThread renderThread;
     QGraphicsPixmapItem mandelbrotPixmapItem;
     QPixmap pixmap;
+    QImage defaultPalette;
     MandelbrotSet mandelbrotSet;
     QGraphicsScene scene;
     bool uiChanged;
