@@ -2,6 +2,7 @@
 #include "ui_mandelbrotmainwindow.h"
 #include <QFile>
 #include <QTextStream>
+#include <QMessageBox>
 
 const QString MandelbrotMainWindow::STANDARD_CONFIG_NAME="Standard Mandelbrot";
 const MandelbrotConfig MandelbrotMainWindow::STANDARD_CONFIG=
@@ -79,8 +80,12 @@ MandelbrotMainWindow::MandelbrotMainWindow(QWidget *parent) :
 void MandelbrotMainWindow::addConfig(QString name,const MandelbrotConfig& config)
 {
     if(configurations.find(name)==configurations.end())
+    {
+        configurations[name]=config;
         ui->nameComboBox->insertItem(std::distance(configurations.begin(),configurations.find(name)),name);
-    configurations[name]=config;
+    }
+    else
+        configurations[name]=config;
 }
 
 MandelbrotMainWindow::~MandelbrotMainWindow()
@@ -259,6 +264,16 @@ void ScrollableGraphicsView::mousePressEvent(QMouseEvent *event)
     }
 }
 
+void MandelbrotMainWindow::mousePressEvent(QMouseEvent *e)
+{
+    if(ui->nameLabel->geometry().contains(e->pos()))
+    {
+        QMessageBox msg;
+        msg.setText("Test");
+        msg.exec();
+    }
+}
+
 void ScrollableGraphicsView::updateZoomRect(QPoint p1, QPoint p2)
 {
     QPoint d=p2-p1;
@@ -379,6 +394,7 @@ void MandelbrotMainWindow::on_saveConfigPushButton_clicked()
 {
     setConfigToUIContents();
     saveConfig();
+    ui->nameComboBox->setCurrentIndex(ui->nameComboBox->findText(currentConfigName));
 }
 
 void MandelbrotMainWindow::on_saveImagePushButton_clicked()
