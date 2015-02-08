@@ -77,8 +77,8 @@ void MandelbrotSet::renderMandelbrot(double xCenter, double yCenter, int width, 
                 paletteYeval_.run();
                 xPal=paletteXeval_.result();
                 yPal=paletteYeval_.result();
-                xPal=(xPal<0 || xPal>upperLimit)?0:xPal;
-                yPal=(yPal<0 || yPal>upperLimit)?0:yPal;
+                xPal=(xPal<0 || xPal>upperLimit || xPal!=xPal)?0:xPal;
+                yPal=(yPal<0 || yPal>upperLimit || yPal!=yPal)?0:yPal;
                 ixPal=(int)xPal;
                 iyPal=(int)yPal;
                 int index[4];
@@ -144,7 +144,7 @@ void MandelbrotSet::renderJulia(double xCenter, double yCenter, int width, int h
     double *e2w=paletteYeval_.getVarPtr('w'), *e2h=paletteYeval_.getVarPtr('h');
 
     const int upperLimit=(1<<(sizeof(int)*8-2));
-    *e1m=*e2m=nIterations;
+    *e1m=*e2m=(double)nIterations;
     *e1l=*e2l=limit;
     *e1w=*e2w=(double)paletteWidth;
     *e1h=*e2h=(double)paletteHeight;
@@ -153,7 +153,7 @@ void MandelbrotSet::renderJulia(double xCenter, double yCenter, int width, int h
     row0Interior_&=(paletteHeight>1);
     for(int pass=0;pass<nPasses;++pass)
     {
-        int nIt=nIterations>>(2*(nPasses-pass));
+        int nIt=nIterations>>(2*(nPasses-pass-1));
         for(int iy=0;iy<height;++iy)
         {
             unsigned long *scanline=reinterpret_cast<unsigned long*>(image.scanLine(iy));
@@ -174,15 +174,15 @@ void MandelbrotSet::renderJulia(double xCenter, double yCenter, int width, int h
                 *e1t=*e2t=ez->I();
                 *e1u=*e2u=x;
                 *e1v=*e2v=y;
-                *e1n=*e2n=it;
+                *e1n=*e2n=(double)it;
                 double xPal,yPal;
                 int ixPal,iyPal;
                 paletteXeval_.run();
                 paletteYeval_.run();
                 xPal=paletteXeval_.result();
                 yPal=paletteYeval_.result();
-                xPal=(xPal<0 || xPal>upperLimit)?0:xPal;
-                yPal=(yPal<0 || yPal>upperLimit)?0:yPal;
+                xPal=(xPal<0 || xPal>upperLimit || xPal!=xPal)?0:xPal;
+                yPal=(yPal<0 || yPal>upperLimit || yPal!=yPal)?0:yPal;
                 ixPal=(int)xPal;
                 iyPal=(int)yPal;
                 int index[4];

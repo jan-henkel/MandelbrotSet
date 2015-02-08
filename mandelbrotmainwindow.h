@@ -41,6 +41,8 @@ public slots:
 protected:
     virtual void resizeEvent(QResizeEvent *e);
 private slots:
+
+    void mousePressEvent(QMouseEvent *);
     void updateImageOffsetDrag(QPoint newOffset);
     void updateImageOffsetRelease(QPoint newOffset);
     void updateImageViewRect(QRectF viewRect);
