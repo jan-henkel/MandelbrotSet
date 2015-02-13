@@ -2,7 +2,8 @@
 #include "ui_mandelbrotmainwindow.h"
 #include <QFile>
 #include <QTextStream>
-#include <QMessageBox>
+#include <QToolTip>
+#include <QMimeData>
 
 //definitions of default configs
 const QString MandelbrotMainWindow::DEFAULT_CONFIG_NAME="Standard Mandelbrot";
@@ -53,6 +54,9 @@ MandelbrotMainWindow::MandelbrotMainWindow(QWidget *parent) :
 
     //set up UI and render area
     ui->setupUi(this);
+    ui->colorPalettePreviewLabel->setAcceptDrops(true);
+    ui->colorPalettePreviewLabel->setMouseTracking(true);
+    ui->colorPalettePreviewLabel->installEventFilter(this);
     mandelbrotPixmapItem.setPixmap(mandelbrotPixmap);
     mandelbrotScene.setSceneRect(0,0,ui->mandelbrotGraphicsView->width(),ui->mandelbrotGraphicsView->height());
     ui->mandelbrotGraphicsView->setScene(&mandelbrotScene);
@@ -63,6 +67,7 @@ MandelbrotMainWindow::MandelbrotMainWindow(QWidget *parent) :
 
     //set up communication between mandelbrotSet object and this window
     QObject::connect(&mandelbrotSet,SIGNAL(imageOut(QImage)),this,SLOT(updateImage(QImage)),Qt::QueuedConnection);
+    QObject::connect(&mandelbrotSet,SIGNAL(errorCodeOut(int)),this,SLOT(receiveErrorCode(int)),Qt::QueuedConnection);
     QObject::connect(this,SIGNAL(renderMandelbrot(double,double,int,int,double,int,double,int)),&mandelbrotSet,SLOT(renderMandelbrot(double,double,int,int,double,int,double,int)),Qt::QueuedConnection);
     QObject::connect(this,SIGNAL(renderJulia(double,double,int,int,double,int,double,int,double,double)),&mandelbrotSet,SLOT(renderJulia(double,double,int,int,double,int,double,int,double,double)),Qt::QueuedConnection);
     QObject::connect(this,SIGNAL(parseFormula(QString)),&mandelbrotSet,SLOT(parseFormula(QString)),Qt::QueuedConnection);
@@ -129,7 +134,21 @@ void MandelbrotMainWindow::updateImage(QImage image)
 
 void MandelbrotMainWindow::receiveErrorCode(int errorCode)
 {
-
+    //show errors in status bar
+    QString message;
+    if(!errorCode)
+        message="No errors.";
+    else
+    {
+        message="";
+        if(errorCode&MandelbrotSet::FORMULA_PARSE_ERROR)
+            message+="Error parsing formula. ";
+        if(errorCode&MandelbrotSet::PALETTE_XFORMULA_PARSE_ERROR)
+            message+="Error parsing coloring formula, x-coordinate. ";
+        if(errorCode&MandelbrotSet::PALETTE_YFORMULA_PARSE_ERROR)
+            message+="Error parsing coloring formula, y-coordinate. ";
+    }
+    ui->statusBar->showMessage(message,5000);
 }
 
 
@@ -208,6 +227,9 @@ bool MandelbrotMainWindow::eventFilter(QObject *target, QEvent *e)
                 ui->mandelbrotGraphicsView->update();
                 return true;
             }
+            QPoint p=QPoint(ui->mandelbrotGraphicsView->width()/2,ui->mandelbrotGraphicsView->height()/2);
+            p=event->pos()-p;
+            ui->statusBar->showMessage("("+QString::number(currentConfig.scale*p.x()+currentConfig.centerX)+","+QString::number(currentConfig.scale*p.y()+currentConfig.centerY)+")",5000);
             break;
         }
         case QEvent::MouseButtonRelease:
@@ -258,6 +280,45 @@ bool MandelbrotMainWindow::eventFilter(QObject *target, QEvent *e)
                 ui->scaleLineEdit->setText(QString::number(currentConfig.scale));
                 renderImage();
             }
+            break;
+        }
+        default:
+            return false;
+            break;
+        }
+    }
+    else if(target==ui->colorPalettePreviewLabel)
+    {
+        switch(e->type())
+        {
+        //drag-drop color palette into preview label
+        case QEvent::DragEnter:
+        {
+            QDragEnterEvent* event=(QDragEnterEvent*)e;
+            if(event->mimeData()->hasUrls())
+                event->accept();
+            return true;
+            break;
+        }
+        case QEvent::Drop:
+        {
+            QDropEvent* event=(QDropEvent*)e;
+            if(event->mimeData()->hasUrls())
+            {
+                event->accept();
+                currentConfig.colorPaletteFileName=event->mimeData()->urls().first().toLocalFile();
+                updateColorPalettePreview();
+            }
+            return true;
+            break;
+        }
+        //display X and Y coordinates of the color palette corresponding to the current mouse position
+        case QEvent::MouseMove:
+        {
+            QMouseEvent* event=(QMouseEvent*)e;
+            int w1=ui->colorPalettePreviewLabel->pixmap()->width(),w2=ui->colorPalettePreviewLabel->width();
+            int h1=ui->colorPalettePreviewLabel->pixmap()->height(),h2=ui->colorPalettePreviewLabel->width();
+            ui->statusBar->showMessage("X="+QString::number((event->pos().x()*w1)/w2)+" Y="+QString::number((event->pos().y()*h1)/h2),5000);
             break;
         }
         default:
