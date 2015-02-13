@@ -589,5 +589,5 @@ void MandelbrotMainWindow::generateDefaultPalette()
 {
     defaultPalette=QImage(256,1,QImage::Format_RGB32);
     for(int i=0;i<256;++i)
-      ((unsigned long*)defaultPalette.scanLine(0))[i]=(unsigned long)qRgb(i,i,0);
+      ((unsigned long*)defaultPalette.scanLine(0))[i]=(unsigned long)qRgb(i,i/2,0);
 }
