@@ -4,8 +4,9 @@
 #include <QTextStream>
 #include <QMessageBox>
 
-const QString MandelbrotMainWindow::STANDARD_CONFIG_NAME="Standard Mandelbrot";
-const MandelbrotConfig MandelbrotMainWindow::STANDARD_CONFIG=
+//definitions of default configs
+const QString MandelbrotMainWindow::DEFAULT_CONFIG_NAME="Standard Mandelbrot";
+const MandelbrotConfig MandelbrotMainWindow::DEFAULT_CONFIG=
         {"z^2+c",       //formula
         4.0,            //limit
         -0.637011f,     //centerX
@@ -21,8 +22,8 @@ const MandelbrotConfig MandelbrotMainWindow::STANDARD_CONFIG=
         0.0,            //juliaRe
         0.0             //juliaIm
         };
-const QString MandelbrotMainWindow::STANDARD_CONFIG_SMOOTH_COLORING_NAME="Standard Mandelbrot (smooth coloring)";
-const MandelbrotConfig MandelbrotMainWindow::STANDARD_CONFIG_SMOOTH_COLORING=
+const QString MandelbrotMainWindow::DEFAULT_CONFIG_SMOOTH_COLORING_NAME="Standard Mandelbrot (smooth coloring)";
+const MandelbrotConfig MandelbrotMainWindow::DEFAULT_CONFIG_SMOOTH_COLORING=
         {"z^2+c",                                           //formula
         4.0,                                                //limit
         -0.637011f,                                         //centerX
@@ -39,25 +40,29 @@ const MandelbrotConfig MandelbrotMainWindow::STANDARD_CONFIG_SMOOTH_COLORING=
         0.0                                                 //juliaIm
         };
 
+const int MandelbrotMainWindow::MIN_ZOOM_WIDTH=20;
+const int MandelbrotMainWindow::MIN_ZOOM_HEIGHT=20;
 
 MandelbrotMainWindow::MandelbrotMainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MandelbrotMainWindow)
 {
-    mandelbrotSet.moveToThread(&renderThread);
-    renderThread.start();
+    //set up multithreading
+    mandelbrotSet.moveToThread(&workerThread);
+    workerThread.start();
+
+    //set up UI and render area
     ui->setupUi(this);
-    resizeTimer.setSingleShot(true);
-    generateDefaultPalette();
-    mandelbrotPixmapItem.setPixmap(pixmap);
-    scene.setSceneRect(0,0,ui->mandelbrotGraphicsView->width(),ui->mandelbrotGraphicsView->height());
-    ui->mandelbrotGraphicsView->setScene(&scene);
-    scene.addItem(&mandelbrotPixmapItem);
+    mandelbrotPixmapItem.setPixmap(mandelbrotPixmap);
+    mandelbrotScene.setSceneRect(0,0,ui->mandelbrotGraphicsView->width(),ui->mandelbrotGraphicsView->height());
+    ui->mandelbrotGraphicsView->setScene(&mandelbrotScene);
+    mandelbrotScene.addItem(&mandelbrotPixmapItem);
+    ui->mandelbrotGraphicsView->setMouseTracking(true);
+    ui->mandelbrotGraphicsView->installEventFilter(this);
+    ui->mandelbrotGraphicsView->viewport()->installEventFilter(this);
+
+    //set up communication between mandelbrotSet object and this window
     QObject::connect(&mandelbrotSet,SIGNAL(imageOut(QImage)),this,SLOT(updateImage(QImage)),Qt::QueuedConnection);
-    QObject::connect(ui->mandelbrotGraphicsView,SIGNAL(updateOffsetDrag(QPoint)),this,SLOT(updateImageOffsetDrag(QPoint)));
-    QObject::connect(ui->mandelbrotGraphicsView,SIGNAL(updateOffsetRelease(QPoint)),this,SLOT(updateImageOffsetRelease(QPoint)));
-    QObject::connect(ui->mandelbrotGraphicsView,SIGNAL(updateViewRect(QRectF)),this,SLOT(updateImageViewRect(QRectF)));
-    QObject::connect(&resizeTimer,SIGNAL(timeout()),this,SLOT(resizeTimerExpired()));
     QObject::connect(this,SIGNAL(renderMandelbrot(double,double,int,int,double,int,double,int)),&mandelbrotSet,SLOT(renderMandelbrot(double,double,int,int,double,int,double,int)),Qt::QueuedConnection);
     QObject::connect(this,SIGNAL(renderJulia(double,double,int,int,double,int,double,int,double,double)),&mandelbrotSet,SLOT(renderJulia(double,double,int,int,double,int,double,int,double,double)),Qt::QueuedConnection);
     QObject::connect(this,SIGNAL(parseFormula(QString)),&mandelbrotSet,SLOT(parseFormula(QString)),Qt::QueuedConnection);
@@ -66,19 +71,336 @@ MandelbrotMainWindow::MandelbrotMainWindow(QWidget *parent) :
     QObject::connect(this,SIGNAL(setCol0Interior(bool)),&mandelbrotSet,SLOT(setCol0Interior(bool)),Qt::QueuedConnection);
     QObject::connect(this,SIGNAL(setRow0Interior(bool)),&mandelbrotSet,SLOT(setRow0Interior(bool)),Qt::QueuedConnection);
     QObject::connect(this,SIGNAL(setColorPalette(QImage)),&mandelbrotSet,SLOT(setColorPalette(QImage)),Qt::QueuedConnection);
+
+    //set up delayedRenderTimer
+    delayedRenderTimer.setSingleShot(true);
+    QObject::connect(&delayedRenderTimer,SIGNAL(timeout()),this,SLOT(renderImage()));
+
+    //generate default color palette
+    generateDefaultPalette();
+
+    //read configurations from config.cfg, set up default configurations
     readConfigs();
-    addConfig(STANDARD_CONFIG_NAME,STANDARD_CONFIG);
-    addConfig(STANDARD_CONFIG_SMOOTH_COLORING_NAME,STANDARD_CONFIG_SMOOTH_COLORING);
-    currentConfigName=STANDARD_CONFIG_NAME;
-    currentConfig=STANDARD_CONFIG;
+    addConfig(DEFAULT_CONFIG_NAME,DEFAULT_CONFIG);
+    addConfig(DEFAULT_CONFIG_SMOOTH_COLORING_NAME,DEFAULT_CONFIG_SMOOTH_COLORING);
+    currentConfigName=DEFAULT_CONFIG_NAME;
+    currentConfig=DEFAULT_CONFIG;
+    ui->nameComboBox->setCurrentText(DEFAULT_CONFIG_NAME);
+    ui->nameComboBox->setCurrentIndex(ui->nameComboBox->findText(DEFAULT_CONFIG_NAME));
+    applyCurrentConfig();
     updateConfigUI();
-    ui->nameComboBox->setCurrentText(STANDARD_CONFIG_NAME);
-    ui->nameComboBox->setCurrentIndex(ui->nameComboBox->findText(STANDARD_CONFIG_NAME));
-    applyConfig();
 }
+
+MandelbrotMainWindow::~MandelbrotMainWindow()
+{
+    //cleanup
+    workerThread.terminate();
+    mandelbrotScene.removeItem(&mandelbrotPixmapItem);
+    delete ui;
+}
+
+void MandelbrotMainWindow::renderImage()
+{
+    //render Mandelbrot- or Julia-type images depending on current configuration
+    if(!currentConfig.julia)
+        emit renderMandelbrot(currentConfig.centerX,currentConfig.centerY,ui->mandelbrotGraphicsView->width(),ui->mandelbrotGraphicsView->height(),currentConfig.scale,currentConfig.nIterations,currentConfig.limit,2);
+    else
+        emit renderJulia(currentConfig.centerX,currentConfig.centerY,ui->mandelbrotGraphicsView->width(),ui->mandelbrotGraphicsView->height(),currentConfig.scale,currentConfig.nIterations,currentConfig.limit,2,currentConfig.juliaRe,currentConfig.juliaIm);
+}
+
+/*
+ *
+ *
+ *
+ * processing of signals from worker thread
+ *
+ *
+ *
+ */
+
+void MandelbrotMainWindow::updateImage(QImage image)
+{
+    mandelbrotPixmap=QPixmap::fromImage(image);
+    mandelbrotPixmapItem.setPos(0,0);
+    mandelbrotPixmapItem.setOffset(0,0);
+    mandelbrotPixmapItem.setPixmap(mandelbrotPixmap);
+    ui->mandelbrotGraphicsView->update();
+}
+
+void MandelbrotMainWindow::receiveErrorCode(int errorCode)
+{
+
+}
+
+
+/*
+ *
+ *
+ *
+ *  event handlers and input processing
+ *
+ *
+ *
+ */
+
+//render area input processing
+bool MandelbrotMainWindow::eventFilter(QObject *target, QEvent *e)
+{
+    if(target==ui->mandelbrotGraphicsView->viewport() || target==ui->mandelbrotGraphicsView)
+    {
+        switch(e->type())
+        {
+        case QEvent::MouseButtonPress:
+        {
+            QMouseEvent* event=(QMouseEvent*)e;
+            if(event->button()==Qt::LeftButton)
+            {
+                //remember click position, add zoom rectangle of minimal size to render area
+                zoomClickPos=event->pos();
+                int w,h,renderWidth,renderHeight;
+                w=MIN_ZOOM_WIDTH;
+                h=MIN_ZOOM_HEIGHT;
+                renderWidth=ui->mandelbrotGraphicsView->width();
+                renderHeight=ui->mandelbrotGraphicsView->height();
+                if(renderWidth>renderHeight)
+                    w=(h*renderWidth)/renderHeight;
+                else
+                    h=(w*renderHeight)/renderWidth;
+                zoomRect.setRect(event->pos().x(),event->pos().y(),w,h);
+                //set zoomRect color to black or white to achieve best contrast with current palette
+                QColor color=QColor(currentColorPalette.pixel(0,0));
+                color=((color.red()+color.green()+color.blue())>3*128)?QColor(0,0,0):QColor(255,255,255);
+                zoomRect.setPen(QPen(color));
+                mandelbrotScene.addItem(&zoomRect);
+                ui->mandelbrotGraphicsView->update();
+                return true;
+            }
+            else if(event->button()==Qt::RightButton)
+            {
+                //remember click position
+                dragClickPos=event->pos();
+                return true;
+            }
+            break;
+        }
+        case QEvent::MouseMove:
+        {
+            QMouseEvent* event=(QMouseEvent*)e;
+            if(event->buttons() & Qt::LeftButton)
+            {
+                //update zoom rectangle
+                QPoint d=((QMouseEvent*)e)->pos()-zoomClickPos;
+                int w,h,renderWidth,renderHeight;
+                renderWidth=ui->mandelbrotGraphicsView->width();
+                renderHeight=ui->mandelbrotGraphicsView->height();
+                w=(d.x()<MIN_ZOOM_WIDTH)?MIN_ZOOM_WIDTH:d.x();
+                h=(d.y()<MIN_ZOOM_HEIGHT)?MIN_ZOOM_HEIGHT:d.y();
+                w=((h*renderWidth)/renderHeight<=w)?w:(h*renderWidth)/renderHeight;
+                h=((w*renderHeight)/renderWidth<=h)?h:(w*renderHeight)/renderWidth;
+                zoomRect.setRect(zoomClickPos.x(),zoomClickPos.y(),w,h);
+                this->update();
+                return true;
+            }
+            if(event->buttons() & Qt::RightButton)
+            {
+                //drag image to new position on render area, don't rerender yet
+                mandelbrotPixmapItem.setOffset(event->pos()-dragClickPos);
+                ui->mandelbrotGraphicsView->update();
+                return true;
+            }
+            break;
+        }
+        case QEvent::MouseButtonRelease:
+        {
+            QMouseEvent* event=(QMouseEvent*)e;
+            if(event->button() == Qt::LeftButton)
+            {
+                //remove zoomRect from render area
+                mandelbrotScene.removeItem(&zoomRect);
+                ui->mandelbrotGraphicsView->update();
+                //zoom in according to zoomRect, rerender
+                QRectF rect=zoomRect.rect();
+                zoomToRect(rect);
+                return true;
+            }
+            else if(event->button() == Qt::RightButton)
+            {
+                //rerender at new position
+                QPoint offset=event->pos()-dragClickPos;
+                moveByOffset(offset);
+                return true;
+            }
+            break;
+        }
+        case QEvent::Wheel:
+        {
+            //zoom in and out
+            QWheelEvent* event=(QWheelEvent*)e;
+            currentConfig.scale*=pow(16.,-(double)event->angleDelta().y()/(8.*360.));
+            ui->scaleLineEdit->setText(QString::number(currentConfig.scale));
+            delayedRenderTimer.start(200);
+            return false;
+            break;
+        }
+        case QEvent::KeyRelease:
+        {
+            //zoom in and out
+            QKeyEvent* event=(QKeyEvent*)e;
+            if(event->key()==Qt::Key_Plus)
+            {
+                currentConfig.scale/=2.;
+                ui->scaleLineEdit->setText(QString::number(currentConfig.scale));
+                renderImage();
+            }
+            else if(event->key()==Qt::Key_Minus)
+            {
+                currentConfig.scale*=2.;
+                ui->scaleLineEdit->setText(QString::number(currentConfig.scale));
+                renderImage();
+            }
+            break;
+        }
+        default:
+            return false;
+            break;
+        }
+    }
+    return false;
+}
+
+//resize event handler
+void MandelbrotMainWindow::resizeEvent(QResizeEvent *e)
+{
+    QMainWindow::resizeEvent(e);
+    mandelbrotScene.setSceneRect(0,0,ui->mandelbrotGraphicsView->width(),ui->mandelbrotGraphicsView->height());
+    mandelbrotPixmapItem.setPos(ui->mandelbrotGraphicsView->width()/2-mandelbrotPixmapItem.pixmap().width()/2,ui->mandelbrotGraphicsView->height()/2-mandelbrotPixmapItem.pixmap().height()/2);
+    delayedRenderTimer.start(300);
+}
+
+void MandelbrotMainWindow::zoomToRect(QRectF rect)
+{
+    //change current config according to zoom rectangle
+    currentConfig.centerX+=currentConfig.scale*(rect.x()+rect.width()/2-ui->mandelbrotGraphicsView->width()/2);
+    currentConfig.centerY+=currentConfig.scale*(rect.y()+rect.height()/2-ui->mandelbrotGraphicsView->height()/2);
+    currentConfig.scale*=rect.width()/ui->mandelbrotGraphicsView->width();
+    //update UI
+    ui->xLineEdit->setText(QString::number(currentConfig.centerX));
+    ui->yLineEdit->setText(QString::number(currentConfig.centerY));
+    ui->scaleLineEdit->setText(QString::number(currentConfig.scale));
+    //render selected area
+    renderImage();
+}
+
+void MandelbrotMainWindow::moveByOffset(QPoint offset)
+{
+    //change current config according to offset
+    currentConfig.centerX-=currentConfig.scale*offset.x();
+    currentConfig.centerY-=currentConfig.scale*offset.y();
+    //update UI
+    ui->xLineEdit->setText(QString::number(currentConfig.centerX));
+    ui->yLineEdit->setText(QString::number(currentConfig.centerY));
+    //render new area
+    renderImage();
+}
+
+/*
+ *
+ *
+ *
+ * UI input processing
+ *
+ *
+ *
+ */
+
+
+void MandelbrotMainWindow::on_nameComboBox_activated(const QString &str)
+{
+    //user picked a new config from the combo box
+    if(configurations.find(str)==configurations.end())
+        return;
+    else
+    {
+        currentConfigName=str;
+        currentConfig=configurations[str];
+    }
+    updateConfigUI();
+    applyCurrentConfig();
+    renderImage();
+}
+
+void MandelbrotMainWindow::on_saveConfigPushButton_clicked()
+{
+    //user intends to save current settings
+    setConfigToUIContents();
+    saveCurrentConfig();
+    ui->nameComboBox->setCurrentIndex(ui->nameComboBox->findText(currentConfigName));
+}
+
+void MandelbrotMainWindow::on_restoreConfigPushButton_clicked()
+{
+    //user wants to restore the config currently selected in the combo box
+    restoreCurrentConfig();
+    applyCurrentConfig();
+    renderImage();
+}
+
+void MandelbrotMainWindow::on_deleteConfigPushButton_clicked()
+{
+    //user wants to delete the config currently selected in the combo box
+    deleteCurrentConfig();
+    applyCurrentConfig();
+    renderImage();
+}
+
+void MandelbrotMainWindow::on_setColorPalettePushButton_clicked()
+{
+    //user selects new color palette from image
+    QString fileName=QFileDialog::getOpenFileName(0,"Select color palette");
+    currentConfig.colorPaletteFileName=fileName;
+    updateColorPalettePreview();
+}
+
+void MandelbrotMainWindow::on_mandelbrotRadioButton_toggled(bool checked)
+{
+    //user changes mode to Mandelbrot- or Julia-type images
+    currentConfig.julia=!checked;
+    ui->juliaXLabel->setVisible(!checked);
+    ui->juliaXLineEdit->setVisible(!checked);
+    ui->juliaYLabel->setVisible(!checked);
+    ui->juliaYLineEdit->setVisible(!checked);
+}
+
+void MandelbrotMainWindow::on_applyPushButton_clicked()
+{
+    //user wants to apply the config as set and displayed in the UI
+    setConfigToUIContents();
+    applyCurrentConfig();
+    renderImage();
+}
+
+void MandelbrotMainWindow::on_saveImagePushButton_clicked()
+{
+    //user wants to save rendered image to a file
+    QString fileName=QFileDialog::getSaveFileName(0,"Save image");
+    if(fileName!="")
+        mandelbrotPixmapItem.pixmap().save(fileName);
+}
+
+
+/*
+ *
+ *
+ *
+ * config management functions
+ *
+ *
+ *
+ */
 
 void MandelbrotMainWindow::addConfig(QString name,const MandelbrotConfig& config)
 {
+    //add config of the name specified. if it already exists, replace it
     if(configurations.find(name)==configurations.end())
     {
         configurations[name]=config;
@@ -88,35 +410,55 @@ void MandelbrotMainWindow::addConfig(QString name,const MandelbrotConfig& config
         configurations[name]=config;
 }
 
-MandelbrotMainWindow::~MandelbrotMainWindow()
+void MandelbrotMainWindow::applyCurrentConfig()
 {
-    renderThread.terminate();
-    scene.removeItem(&mandelbrotPixmapItem);
-    delete ui;
+    //update mandelbrotSet object according to current config
+    emit parseFormula(currentConfig.formula);
+    if(currentConfig.colorPaletteFileName=="" || !currentColorPalette.load(currentConfig.colorPaletteFileName))
+        currentColorPalette=defaultPalette;
+    emit setColorPalette(currentColorPalette);
+    emit parsePaletteXFormula(currentConfig.paletteFormulaX);
+    emit parsePaletteYFormula(currentConfig.paletteFormulaY);
+    emit setCol0Interior(currentConfig.col0interior);
+    emit setRow0Interior(currentConfig.row0interior);
 }
 
-void MandelbrotMainWindow::resizeTimerExpired()
+void MandelbrotMainWindow::saveCurrentConfig()
 {
-    renderImage();
+    //add config (as currently displayed) to the configurations set and combo box and write the config list to config.cfg
+    currentConfigName=ui->nameComboBox->currentText();
+    addConfig(currentConfigName,currentConfig);
+    writeConfigs();
 }
 
-void MandelbrotMainWindow::updateImageOffsetDrag(QPoint newOffset)
+void MandelbrotMainWindow::restoreCurrentConfig()
 {
-    mandelbrotPixmapItem.setOffset(newOffset);
-    ui->mandelbrotGraphicsView->update();
+    //restore config settings from the config set
+    currentConfig=configurations[currentConfigName];
+    updateConfigUI();
+    ui->nameComboBox->setCurrentText(currentConfigName);
 }
 
-void MandelbrotMainWindow::updateImageOffsetRelease(QPoint newOffset)
+void MandelbrotMainWindow::deleteCurrentConfig()
 {
-    currentConfig.centerX-=currentConfig.scale*newOffset.rx();
-    currentConfig.centerY-=currentConfig.scale*newOffset.ry();
-    ui->xLineEdit->setText(QString::number(currentConfig.centerX));
-    ui->yLineEdit->setText(QString::number(currentConfig.centerY));
-    renderImage();
+    //delete currently selected config from the config set (unless default config is selected
+    if(currentConfigName!=DEFAULT_CONFIG_NAME && currentConfigName!=DEFAULT_CONFIG_SMOOTH_COLORING_NAME)
+    {
+        configurations.erase(currentConfigName);
+        ui->nameComboBox->removeItem(ui->nameComboBox->currentIndex());
+        currentConfigName=DEFAULT_CONFIG_NAME;
+        currentConfig=DEFAULT_CONFIG;
+        updateConfigUI();
+        ui->nameComboBox->setCurrentText(currentConfigName);
+        ui->nameComboBox->setCurrentIndex(ui->nameComboBox->findText(currentConfigName));
+        writeConfigs();
+    }
 }
+
 
 void MandelbrotMainWindow::readConfigs()
 {
+    //read config set from config.cfg, fill combo box with configurations
     QFile file("config.cfg");
     if(!file.open(QIODevice::ReadOnly | QIODevice::Text))
         return;
@@ -152,6 +494,7 @@ void MandelbrotMainWindow::readConfigs()
 
 void MandelbrotMainWindow::writeConfigs()
 {
+    //write config set to config.cfg
     QFile file("config.cfg");
     if(!file.open(QIODevice::WriteOnly | QIODevice::Text))
         return;
@@ -180,19 +523,9 @@ void MandelbrotMainWindow::writeConfigs()
     }
 }
 
-void MandelbrotMainWindow::updateImageViewRect(QRectF viewRect)
-{
-    currentConfig.centerX+=currentConfig.scale*(viewRect.x()+viewRect.width()/2-ui->mandelbrotGraphicsView->width()/2);
-    currentConfig.centerY+=currentConfig.scale*(viewRect.y()+viewRect.height()/2-ui->mandelbrotGraphicsView->height()/2);
-    currentConfig.scale*=viewRect.width()/ui->mandelbrotGraphicsView->width();
-    ui->xLineEdit->setText(QString::number(currentConfig.centerX));
-    ui->yLineEdit->setText(QString::number(currentConfig.centerY));
-    ui->scaleLineEdit->setText(QString::number(currentConfig.scale));
-    renderImage();
-}
-
 void MandelbrotMainWindow::updateConfigUI()
 {
+    //update UI to reflect current config
     ui->formulaLineEdit->setText(currentConfig.formula);
     ui->limitLineEdit->setText(QString::number(currentConfig.limit));
     ui->xLineEdit->setText(QString::number(currentConfig.centerX));
@@ -208,6 +541,14 @@ void MandelbrotMainWindow::updateConfigUI()
     ui->juliaXLineEdit->setText(QString::number(currentConfig.juliaRe));
     ui->juliaYLineEdit->setText(QString::number(currentConfig.juliaIm));
     updateColorPalettePreview();
+}
+
+void MandelbrotMainWindow::updateColorPalettePreview()
+{
+    QImage palette;
+    if(currentConfig.colorPaletteFileName=="" || !palette.load(currentConfig.colorPaletteFileName))
+        palette=defaultPalette;
+    ui->colorPalettePreviewLabel->setPixmap(QPixmap::fromImage(palette));
 }
 
 int MandelbrotMainWindow::setConfigToUIContents()
@@ -244,230 +585,9 @@ int MandelbrotMainWindow::setConfigToUIContents()
     return errorCode;
 }
 
-void ScrollableGraphicsView::mousePressEvent(QMouseEvent *event)
-{
-    if(event->button()==Qt::LeftButton)
-        dragClickPos=event->pos();
-    if(event->button()==Qt::RightButton)
-    {
-        zoomClickPos=event->pos();
-        int w,h;
-        w=minZoomWidth;
-        h=minZoomHeight;
-        if(this->width()>this->height())
-            w=h*width()/height();
-        else
-            h=w*height()/width();
-        zoomRect.setRect(event->pos().x(),event->pos().y(),w,h);
-        this->scene()->addItem(&zoomRect);
-        this->update();
-    }
-}
-
-void MandelbrotMainWindow::mousePressEvent(QMouseEvent *e)
-{
-    if(ui->nameLabel->geometry().contains(e->pos()))
-    {
-        QMessageBox msg;
-        msg.setText("Test");
-        msg.exec();
-    }
-}
-
-void ScrollableGraphicsView::updateZoomRect(QPoint p1, QPoint p2)
-{
-    QPoint d=p2-p1;
-    int w,h;
-    w=(d.x()<minZoomWidth)?minZoomWidth:d.x();
-    h=(d.y()<minZoomHeight)?minZoomHeight:d.y();
-    w=(h*width()/height()<=w)?w:h*width()/height();
-    h=(w*height()/width()<=h)?h:w*height()/width();
-    zoomRect.setRect(zoomClickPos.x(),zoomClickPos.y(),w,h);
-    this->update();
-}
-
-void ScrollableGraphicsView::mouseMoveEvent(QMouseEvent *event)
-{
-    if(event->buttons() & Qt::LeftButton)
-        emit updateOffsetDrag(event->pos()-dragClickPos);
-    if(event->buttons() & Qt::RightButton)
-        updateZoomRect(zoomClickPos,event->pos());
-}
-
-void ScrollableGraphicsView::mouseReleaseEvent(QMouseEvent *event)
-{
-    if(event->button() == Qt::LeftButton)
-        emit updateOffsetRelease(event->pos()-dragClickPos);
-    if(event->button() == Qt::RightButton)
-    {
-        this->scene()->removeItem(&zoomRect);
-        emit updateViewRect(this->zoomRect.rect());
-    }
-}
-
-void MandelbrotMainWindow::updateImage(QImage image)
-{
-    pixmap=QPixmap::fromImage(image);
-    mandelbrotPixmapItem.setPos(0,0);
-    mandelbrotPixmapItem.setOffset(0,0);
-    mandelbrotPixmapItem.setPixmap(pixmap);
-    ui->mandelbrotGraphicsView->update();
-}
-
-void MandelbrotMainWindow::renderImage()
-{
-    if(!currentConfig.julia)
-        renderMandelbrot();
-    else
-        renderJulia();
-}
-
-void MandelbrotMainWindow::renderMandelbrot()
-{
-    emit renderMandelbrot(currentConfig.centerX,currentConfig.centerY,ui->mandelbrotGraphicsView->width(),ui->mandelbrotGraphicsView->height(),currentConfig.scale,currentConfig.nIterations,currentConfig.limit,2);
-}
-void MandelbrotMainWindow::renderJulia()
-{
-    emit renderJulia(currentConfig.centerX,currentConfig.centerY,ui->mandelbrotGraphicsView->width(),ui->mandelbrotGraphicsView->height(),currentConfig.scale,currentConfig.nIterations,currentConfig.limit,2,currentConfig.juliaRe,currentConfig.juliaIm);
-}
-
 void MandelbrotMainWindow::generateDefaultPalette()
 {
     defaultPalette=QImage(256,1,QImage::Format_RGB32);
     for(int i=0;i<256;++i)
       ((unsigned long*)defaultPalette.scanLine(0))[i]=(unsigned long)qRgb(i,i,0);
-}
-
-void MandelbrotMainWindow::updateColorPalettePreview()
-{
-    QImage colorPalette;
-    if(currentConfig.colorPaletteFileName=="" || !colorPalette.load(currentConfig.colorPaletteFileName))
-        colorPalette=defaultPalette;
-    ui->colorPalettePreviewLabel->setPixmap(QPixmap::fromImage(colorPalette));
-}
-
-void MandelbrotMainWindow::on_setColorPalettePushButton_clicked()
-{
-    QString fileName=QFileDialog::getOpenFileName(0,"Select color palette");
-    currentConfig.colorPaletteFileName=fileName;
-    updateColorPalettePreview();
-}
-
-
-void MandelbrotMainWindow::resizeEvent(QResizeEvent *e)
-{
-    QMainWindow::resizeEvent(e);
-    scene.setSceneRect(0,0,ui->mandelbrotGraphicsView->width(),ui->mandelbrotGraphicsView->height());
-    mandelbrotPixmapItem.setPos(ui->mandelbrotGraphicsView->width()/2-mandelbrotPixmapItem.pixmap().width()/2,ui->mandelbrotGraphicsView->height()/2-mandelbrotPixmapItem.pixmap().height()/2);
-    resizeTimer.start(500);
-}
-
-void MandelbrotMainWindow::on_nameComboBox_activated(const QString &str)
-{
-    if(configurations.find(str)==configurations.end())
-        return;
-    else
-    {
-        currentConfigName=str;
-        currentConfig=configurations[str];
-    }
-    updateConfigUI();
-    applyConfig();
-    renderImage();
-}
-
-void MandelbrotMainWindow::saveImage()
-{
-    QString fileName=QFileDialog::getSaveFileName(0,"Save image");
-    if(fileName!="")
-        mandelbrotPixmapItem.pixmap().save(fileName);
-}
-
-void MandelbrotMainWindow::saveConfig()
-{
-    currentConfigName=ui->nameComboBox->currentText();
-    addConfig(currentConfigName,currentConfig);
-    writeConfigs();
-}
-
-void MandelbrotMainWindow::on_saveConfigPushButton_clicked()
-{
-    setConfigToUIContents();
-    saveConfig();
-    ui->nameComboBox->setCurrentIndex(ui->nameComboBox->findText(currentConfigName));
-}
-
-void MandelbrotMainWindow::on_saveImagePushButton_clicked()
-{
-    saveImage();
-}
-
-void MandelbrotMainWindow::restoreConfig()
-{
-    currentConfig=configurations[currentConfigName];
-    updateConfigUI();
-    ui->nameComboBox->setCurrentText(currentConfigName);
-}
-
-void MandelbrotMainWindow::on_restoreConfigPushButton_clicked()
-{
-    restoreConfig();
-    applyConfig();
-    renderImage();
-}
-
-void MandelbrotMainWindow::deleteConfig()
-{
-    if(currentConfigName!=STANDARD_CONFIG_NAME)
-    {
-        configurations.erase(currentConfigName);
-        ui->nameComboBox->removeItem(ui->nameComboBox->currentIndex());
-        currentConfigName=STANDARD_CONFIG_NAME;
-        currentConfig=STANDARD_CONFIG;
-        updateConfigUI();
-        ui->nameComboBox->setCurrentText(currentConfigName);
-        ui->nameComboBox->setCurrentIndex(ui->nameComboBox->findText(currentConfigName));
-        writeConfigs();
-    }
-}
-
-void MandelbrotMainWindow::on_deleteConfigPushButton_clicked()
-{
-    deleteConfig();
-    applyConfig();
-    renderImage();
-}
-
-void MandelbrotMainWindow::applyConfig()
-{
-    emit parseFormula(currentConfig.formula);
-    QImage colorPalette;
-    if(currentConfig.colorPaletteFileName=="" || !colorPalette.load(currentConfig.colorPaletteFileName))
-        colorPalette=defaultPalette;
-    emit setColorPalette(colorPalette);
-    emit parsePaletteXFormula(currentConfig.paletteFormulaX);
-    emit parsePaletteYFormula(currentConfig.paletteFormulaY);
-    emit setCol0Interior(currentConfig.col0interior);
-    emit setRow0Interior(currentConfig.row0interior);
-}
-
-void MandelbrotMainWindow::on_applyPushButton_clicked()
-{
-    setConfigToUIContents();
-    applyConfig();
-    renderImage();
-}
-
-void MandelbrotMainWindow::on_mandelbrotRadioButton_toggled(bool checked)
-{
-    currentConfig.julia=!checked;
-    ui->juliaXLabel->setVisible(!checked);
-    ui->juliaXLineEdit->setVisible(!checked);
-    ui->juliaYLabel->setVisible(!checked);
-    ui->juliaYLineEdit->setVisible(!checked);
-}
-
-void MandelbrotMainWindow::receiveErrorCode(int errorCode)
-{
-
 }
