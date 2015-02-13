@@ -649,7 +649,33 @@ int MandelbrotMainWindow::setConfigToUIContents()
 
 void MandelbrotMainWindow::generateDefaultPalette()
 {
-    defaultPalette=QImage(256,1,QImage::Format_RGB32);
-    for(int i=0;i<256;++i)
-      ((unsigned long*)defaultPalette.scanLine(0))[i]=(unsigned long)qRgb(i,i/2,0);
+    static const int width=256;
+    static const int ncolors=8;
+    defaultPalette=QImage(width,1,QImage::Format_RGB32);
+    QColor colors[]=
+    {
+        QColor(0,0,100),
+        QColor(0,0,255),
+        QColor(255,255,255),
+        QColor(0,0,255),
+        QColor(255,255,255),
+        QColor(240,70,0),
+        QColor(255,255,70),
+        QColor(255,255,255)
+    };
+    ((unsigned long*)defaultPalette.scanLine(0))[0]=(unsigned long)qRgb(0,0,0);
+    double seglength=(double)width/(double)(ncolors-1);
+    int seg;
+    double pos;
+    for(int i=1;i<width;++i)
+    {
+        seg=i*(ncolors-1)/width;
+        pos=((double)i-seg*seglength)/seglength;
+        ((unsigned long*)defaultPalette.scanLine(0))[i]=(unsigned long)qRgb(
+                colors[seg].red()*(1-pos)+colors[seg+1].red()*pos,
+                colors[seg].green()*(1-pos)+colors[seg+1].green()*pos,
+                colors[seg].blue()*(1-pos)+colors[seg+1].blue()*pos
+                    );
+
+    }
 }
