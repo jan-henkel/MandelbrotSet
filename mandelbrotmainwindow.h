@@ -15,6 +15,7 @@
 #include <map>
 #include <utility>
 #include <QTimer>
+
 namespace Ui {
 class MandelbrotMainWindow;
 }
@@ -27,8 +28,10 @@ public:
     explicit MandelbrotMainWindow(QWidget *parent = 0);
     ~MandelbrotMainWindow();
 signals:
+    //signals for rendering images in another thread
     void renderMandelbrot(double xCenter,double yCenter, int width, int height, double scale, int nIterations, double limit, int nPasses);
     void renderJulia(double xCenter,double yCenter, int width, int height, double scale, int nIterations, double limit, int nPasses, double cRe, double cIm);
+    //signals for changing settings of the MandelbrotSet instance which takes care of calculation and rendering
     void parseFormula(QString formula);
     void parsePaletteXFormula(QString formula);
     void parsePaletteYFormula(QString formula);
@@ -36,86 +39,86 @@ signals:
     void setCol0Interior(bool b);
     void setRow0Interior(bool b);
 public slots:
+    //processing of incoming signals from worker thread
     void updateImage(QImage image);
     void receiveErrorCode(int errorCode);
 protected:
     virtual void resizeEvent(QResizeEvent *e);
+    //event filter to intercept mouse events on the render area
+    bool eventFilter(QObject *target, QEvent *e);
 private slots:
-
-    void mousePressEvent(QMouseEvent *);
-    void updateImageOffsetDrag(QPoint newOffset);
-    void updateImageOffsetRelease(QPoint newOffset);
-    void updateImageViewRect(QRectF viewRect);
-    void on_setColorPalettePushButton_clicked();
+    //UI interaction slots
+    //note: UI code is still messy
+    //to do: thorough model-view-controller implementation
     void on_nameComboBox_activated(const QString &str);
     void on_saveConfigPushButton_clicked();
-    void on_saveImagePushButton_clicked();
     void on_restoreConfigPushButton_clicked();
     void on_deleteConfigPushButton_clicked();
-    void on_applyPushButton_clicked();
+    void on_setColorPalettePushButton_clicked();
     void on_mandelbrotRadioButton_toggled(bool checked);
-    void resizeTimerExpired();
-private:
+    void on_applyPushButton_clicked();
+    void on_saveImagePushButton_clicked();
+
+    //render image slot, sometimes called as normal member
     void renderImage();
-    void renderMandelbrot();
-    void renderJulia();
-    void updateConfigUI();
-    int setConfigToUIContents();
-    void generateDefaultPalette();
-
-    void addConfig(QString name,const MandelbrotConfig& config);
-    void applyConfig();
-    void saveConfig();
-    void restoreConfig();
-    void deleteConfig();
-    void updateColorPalettePreview();
-    void saveImage();
-
-    void readConfigs();
-    void writeConfigs();
+private:
     Ui::MandelbrotMainWindow *ui;
 
-    //configurations for standard Mandelbrot set
-    static const QString STANDARD_CONFIG_NAME;
-    static const MandelbrotConfig STANDARD_CONFIG;
-    //modified coloring formula to reduce banding
-    static const QString STANDARD_CONFIG_SMOOTH_COLORING_NAME;
-    static const MandelbrotConfig STANDARD_CONFIG_SMOOTH_COLORING;
-
-    std::map<QString,MandelbrotConfig> configurations;
-    QString currentConfigName;
-    MandelbrotConfig currentConfig;
-    QThread renderThread;
-    QGraphicsPixmapItem mandelbrotPixmapItem;
-    QPixmap pixmap;
-    QImage defaultPalette;
+    //core calculation and rendering engine, works on seperate thread
     MandelbrotSet mandelbrotSet;
-    QGraphicsScene scene;
-    bool uiChanged;
-    QTimer resizeTimer;
-};
+    QThread workerThread;
 
-class ScrollableGraphicsView : public QGraphicsView
-{
-    Q_OBJECT
-public:
-    ScrollableGraphicsView(QWidget *parent=0):QGraphicsView(parent),minZoomWidth(10),minZoomHeight(10) {}
-signals:
-    void updateOffsetDrag(QPoint dOffset);
-    void updateOffsetRelease(QPoint dOffset);
-    void updateViewRect(QRectF);
-    void clickEvent(QMouseEvent *event);
-protected:
-    void mousePressEvent(QMouseEvent *event);
-    void mouseMoveEvent(QMouseEvent *event);
-    void mouseReleaseEvent(QMouseEvent *event);
-    void updateZoomRect(QPoint p1,QPoint p2);
-private:
+    //contents of render area
+    QPixmap mandelbrotPixmap;
+    QGraphicsScene mandelbrotScene;
+    QGraphicsPixmapItem mandelbrotPixmapItem;
+
+    //render area drag and zoom controls
     QPoint dragClickPos;
     QPoint zoomClickPos;
     QGraphicsRectItem zoomRect;
-    int minZoomWidth;
-    int minZoomHeight;
+    static const int MIN_ZOOM_WIDTH;
+    static const int MIN_ZOOM_HEIGHT;
+    void zoomToRect(QRectF rect);
+    void moveByOffset(QPoint offset);
+
+    //set of configurations addressable by their name
+    std::map<QString,MandelbrotConfig> configurations;
+    //current config
+    QString currentConfigName;
+    MandelbrotConfig currentConfig;
+    QImage currentColorPalette;
+
+    //config management
+    void addConfig(QString name,const MandelbrotConfig& config);
+    void applyCurrentConfig();
+    void saveCurrentConfig();
+    void restoreCurrentConfig();
+    void deleteCurrentConfig();
+    void readConfigs();
+    void writeConfigs();
+
+    //update UI contents (barring the render area) to reflect config
+    void updateConfigUI();
+    void updateColorPalettePreview();
+
+    //update config to reflect UI contents, return an error code specifying which assignments went wrong
+    int setConfigToUIContents();
+
+    //default config
+    static const QString DEFAULT_CONFIG_NAME;
+    static const MandelbrotConfig DEFAULT_CONFIG;
+    //modified coloring formula to reduce banding
+    static const QString DEFAULT_CONFIG_SMOOTH_COLORING_NAME;
+    static const MandelbrotConfig DEFAULT_CONFIG_SMOOTH_COLORING;
+
+    //default color palette
+    QImage defaultPalette;
+    void generateDefaultPalette();
+
+    //while resizing or zooming with the mouse wheel, a single shot timer is continually reset.
+    //upon running out, the image is rerendered. this is to prevent large amounts of rerender calls from piling up.
+    QTimer delayedRenderTimer;
 };
 
 #endif // MANDELBROTMAINWINDOW_H

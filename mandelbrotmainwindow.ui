@@ -16,7 +16,7 @@
   <widget class="QWidget" name="centralWidget">
    <layout class="QHBoxLayout" name="horizontalLayout">
     <item>
-     <widget class="ScrollableGraphicsView" name="mandelbrotGraphicsView">
+     <widget class="QGraphicsView" name="mandelbrotGraphicsView">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
         <horstretch>0</horstretch>
@@ -769,13 +769,30 @@
   <widget class="QStatusBar" name="statusBar"/>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
- <customwidgets>
-  <customwidget>
-   <class>ScrollableGraphicsView</class>
-   <extends>QGraphicsView</extends>
-   <header>mandelbrotmainwindow.h</header>
-  </customwidget>
- </customwidgets>
+ <tabstops>
+  <tabstop>nameComboBox</tabstop>
+  <tabstop>saveConfigPushButton</tabstop>
+  <tabstop>restoreConfigPushButton</tabstop>
+  <tabstop>deleteConfigPushButton</tabstop>
+  <tabstop>formulaLineEdit</tabstop>
+  <tabstop>limitLineEdit</tabstop>
+  <tabstop>xLineEdit</tabstop>
+  <tabstop>yLineEdit</tabstop>
+  <tabstop>scaleLineEdit</tabstop>
+  <tabstop>iterationsLineEdit</tabstop>
+  <tabstop>setColorPalettePushButton</tabstop>
+  <tabstop>paletteFormulaXLineEdit</tabstop>
+  <tabstop>col0CheckBox</tabstop>
+  <tabstop>paletteFormulaYLineEdit</tabstop>
+  <tabstop>row0CheckBox</tabstop>
+  <tabstop>juliaRadioButton</tabstop>
+  <tabstop>mandelbrotRadioButton</tabstop>
+  <tabstop>juliaXLineEdit</tabstop>
+  <tabstop>juliaYLineEdit</tabstop>
+  <tabstop>applyPushButton</tabstop>
+  <tabstop>saveImagePushButton</tabstop>
+  <tabstop>mandelbrotGraphicsView</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

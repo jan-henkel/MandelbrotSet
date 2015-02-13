@@ -26,6 +26,14 @@ struct MandelbrotConfig
     double juliaIm;
 };
 
+//MandelbrotSet class renders an area of the set of complex numbers z whose norm squared stays below a given limit
+//when iterating the assignment z=f(z) where f is a user defined formula.
+//Arbitrary images can be used as color palettes. The coloring is determined by further user defined formulas
+//yielding x and y coordinates on the color palette depending on the following parameters:
+//n: number of iterations before reaching the limit, m: maximum number of iterations
+//s,t: real and imaginary components of z, u,v: real and imaginary components corresponding to the current pixel,
+//h,w: height and width of the color palette in pixels
+
 class MandelbrotSet : public QObject
 {
     Q_OBJECT
