@@ -477,6 +477,7 @@ void MandelbrotMainWindow::applyCurrentConfig()
     emit parseFormula(currentConfig.formula);
     if(currentConfig.colorPaletteFileName=="" || !currentColorPalette.load(currentConfig.colorPaletteFileName))
         currentColorPalette=defaultPalette;
+    ui->mandelbrotGraphicsView->setBackgroundBrush(QBrush(QColor(currentColorPalette.pixel(0,0))));
     emit setColorPalette(currentColorPalette);
     emit parsePaletteXFormula(currentConfig.paletteFormulaX);
     emit parsePaletteYFormula(currentConfig.paletteFormulaY);
