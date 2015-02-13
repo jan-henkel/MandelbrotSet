@@ -190,6 +190,9 @@
            <height>100</height>
           </size>
          </property>
+         <property name="toolTipDuration">
+          <number>-1</number>
+         </property>
          <property name="autoFillBackground">
           <bool>false</bool>
          </property>
