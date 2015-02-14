@@ -317,8 +317,9 @@ bool MandelbrotMainWindow::eventFilter(QObject *target, QEvent *e)
         {
             QMouseEvent* event=(QMouseEvent*)e;
             int w1=ui->colorPalettePreviewLabel->pixmap()->width(),w2=ui->colorPalettePreviewLabel->width();
-            int h1=ui->colorPalettePreviewLabel->pixmap()->height(),h2=ui->colorPalettePreviewLabel->width();
-            ui->statusBar->showMessage("X="+QString::number((event->pos().x()*w1)/w2)+" Y="+QString::number((event->pos().y()*h1)/h2),5000);
+            int h1=ui->colorPalettePreviewLabel->pixmap()->height(),h2=ui->colorPalettePreviewLabel->height();
+            int offset=ui->colorPalettePreviewLabel->frameWidth();
+            ui->statusBar->showMessage("X="+QString::number(((event->pos().x()-offset)*w1)/w2)+" Y="+QString::number(((event->pos().y()-offset)*h1)/h2),5000);
             break;
         }
         default:
