@@ -58,15 +58,34 @@ private slots:
     void on_mandelbrotRadioButton_toggled(bool checked);
     void on_applyPushButton_clicked();
     void on_saveImagePushButton_clicked();
+    void on_formulaLineEdit_textEdited(const QString &);
+    void on_limitLineEdit_textEdited(const QString &);
+    void on_xLineEdit_textEdited(const QString &);
+    void on_yLineEdit_textEdited(const QString &);
+    void on_scaleLineEdit_textEdited(const QString &);
+    void on_iterationsLineEdit_textEdited(const QString &);
+    void on_paletteFormulaXLineEdit_textEdited(const QString &);
+    void on_col0CheckBox_clicked();
+    void on_paletteFormulaYLineEdit_textEdited(const QString &);
+    void on_row0CheckBox_clicked();
+    void on_mandelbrotRadioButton_clicked();
+    void on_juliaRadioButton_clicked();
+    void on_juliaXLineEdit_textEdited(const QString &);
+    void on_juliaYLineEdit_textEdited(const QString &);
+    //progress bar slot
+    void on_renderProgressBar_valueChanged(int value);
 
     //render image slot, sometimes called as normal member
     void renderImage();
+
+
 private:
     Ui::MandelbrotMainWindow *ui;
 
     //core calculation and rendering engine, works on seperate thread
     MandelbrotSet mandelbrotSet;
     QThread workerThread;
+    static const int PASSES;
 
     //contents of render area
     QPixmap mandelbrotPixmap;
@@ -75,10 +94,12 @@ private:
 
     //render area drag and zoom controls
     QPoint dragClickPos;
+    QPoint preDragOffset;
     QPoint zoomClickPos;
     QGraphicsRectItem zoomRect;
     static const int MIN_ZOOM_WIDTH;
     static const int MIN_ZOOM_HEIGHT;
+    static const int MIN_DRAG_DISTANCE_SQUARED;
     void zoomToRect(QRectF rect);
     void moveByOffset(QPoint offset);
 
@@ -111,6 +132,10 @@ private:
     //modified coloring formula to reduce banding
     static const QString DEFAULT_CONFIG_SMOOTH_COLORING_NAME;
     static const MandelbrotConfig DEFAULT_CONFIG_SMOOTH_COLORING;
+
+    static const int DEFAULT_ITERATIONS;
+    static const double DEFAULT_SCALE;
+    static const double DEFAULT_LIMIT;
 
     //default color palette
     QImage defaultPalette;

@@ -40,12 +40,13 @@ class MandelbrotSet : public QObject
 
 public:
     enum ErrorCodes {FORMULA_PARSE_ERROR=1,PALETTE_XFORMULA_PARSE_ERROR=2,PALETTE_YFORMULA_PARSE_ERROR=4};
-    MandelbrotSet(): QObject(), errorCode_(0) {
+    MandelbrotSet(): QObject(), errorCode_(0), cancel_(false) {
         parser_.setMathEval(&eval_);
         paletteXparser_.setMathEval(&paletteXeval_);
         paletteYparser_.setMathEval(&paletteYeval_);
     }
     ~MandelbrotSet() {}
+    void cancel() {++cancel_;}
 public slots:
     void renderMandelbrot(double xCenter,double yCenter, int width, int height, double scale, int nIterations, double limit, int nPasses);
     void renderJulia(double xCenter,double yCenter, int width, int height, double scale, int nIterations, double limit, int nPasses, double cRe, double cIm);
@@ -58,6 +59,7 @@ public slots:
 signals:
     void imageOut(QImage image);
     void errorCodeOut(int errorCode);
+    void linesRendered(int lines);
 private:
     MathParser<Complex> parser_;
     MathParser<double> paletteXparser_;
@@ -69,6 +71,7 @@ private:
     QImage colorPalette_;
     bool col0Interior_;
     bool row0Interior_;
+    int cancel_;
 };
 
 #endif // MANDELBROTSET_H
