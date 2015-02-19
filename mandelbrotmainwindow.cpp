@@ -306,8 +306,9 @@ bool MandelbrotMainWindow::eventFilter(QObject *target, QEvent *e)
             if(event->mimeData()->hasUrls())
             {
                 event->accept();
-                currentConfig.colorPaletteFileName=event->mimeData()->urls().first().toLocalFile();
+                currentConfig.colorPaletteFileName=QDir(".").relativeFilePath(event->mimeData()->urls().first().toLocalFile());
                 updateColorPalettePreview();
+                ui->applyPushButton->setEnabled(true);
             }
             return true;
             break;
@@ -389,6 +390,7 @@ void MandelbrotMainWindow::on_nameComboBox_activated(const QString &str)
     updateConfigUI();
     applyCurrentConfig();
     renderImage();
+    ui->applyPushButton->setEnabled(false);
 }
 
 void MandelbrotMainWindow::on_saveConfigPushButton_clicked()
@@ -405,6 +407,7 @@ void MandelbrotMainWindow::on_restoreConfigPushButton_clicked()
     restoreCurrentConfig();
     applyCurrentConfig();
     renderImage();
+    ui->applyPushButton->setEnabled(false);
 }
 
 void MandelbrotMainWindow::on_deleteConfigPushButton_clicked()
@@ -413,14 +416,16 @@ void MandelbrotMainWindow::on_deleteConfigPushButton_clicked()
     deleteCurrentConfig();
     applyCurrentConfig();
     renderImage();
+    ui->applyPushButton->setEnabled(false);
 }
 
 void MandelbrotMainWindow::on_setColorPalettePushButton_clicked()
 {
     //user selects new color palette from image
-    QString fileName=QFileDialog::getOpenFileName(0,"Select color palette");
-    currentConfig.colorPaletteFileName=fileName;
+    QString fileName=QFileDialog::getOpenFileName(0,"Select color palette","./palettes","Image files (*.jpg; *.png; *.bmp)");
+    currentConfig.colorPaletteFileName=QDir(".").relativeFilePath(fileName);
     updateColorPalettePreview();
+    ui->applyPushButton->setEnabled(true);
 }
 
 void MandelbrotMainWindow::on_mandelbrotRadioButton_toggled(bool checked)
@@ -435,16 +440,17 @@ void MandelbrotMainWindow::on_mandelbrotRadioButton_toggled(bool checked)
 
 void MandelbrotMainWindow::on_applyPushButton_clicked()
 {
-    //user wants to apply the config as set and displayed in the UI
+    //user wants to apply the config as set and displayed on the UI
     setConfigToUIContents();
     applyCurrentConfig();
     renderImage();
+    ui->applyPushButton->setEnabled(false);
 }
 
 void MandelbrotMainWindow::on_saveImagePushButton_clicked()
 {
     //user wants to save rendered image to a file
-    QString fileName=QFileDialog::getSaveFileName(0,"Save image");
+    QString fileName=QFileDialog::getSaveFileName(0,"Save image","./images","Image files (*.jpg; *.png; *.bmp)");
     if(fileName!="")
         mandelbrotPixmapItem.pixmap().save(fileName);
 }
@@ -679,4 +685,75 @@ void MandelbrotMainWindow::generateDefaultPalette()
                     );
 
     }
+    defaultPalette.save("./palettes/default.jpg");
+}
+
+void MandelbrotMainWindow::on_formulaLineEdit_textEdited(const QString &)
+{
+    ui->applyPushButton->setEnabled(true);
+}
+
+void MandelbrotMainWindow::on_limitLineEdit_textEdited(const QString &)
+{
+    ui->applyPushButton->setEnabled(true);
+}
+
+void MandelbrotMainWindow::on_xLineEdit_textEdited(const QString &)
+{
+    ui->applyPushButton->setEnabled(true);
+}
+
+void MandelbrotMainWindow::on_yLineEdit_textEdited(const QString &)
+{
+    ui->applyPushButton->setEnabled(true);
+}
+
+void MandelbrotMainWindow::on_scaleLineEdit_textEdited(const QString &)
+{
+    ui->applyPushButton->setEnabled(true);
+}
+
+void MandelbrotMainWindow::on_iterationsLineEdit_textEdited(const QString &)
+{
+    ui->applyPushButton->setEnabled(true);
+}
+
+void MandelbrotMainWindow::on_paletteFormulaXLineEdit_textEdited(const QString &)
+{
+    ui->applyPushButton->setEnabled(true);
+}
+
+void MandelbrotMainWindow::on_col0CheckBox_clicked()
+{
+    ui->applyPushButton->setEnabled(true);
+}
+
+void MandelbrotMainWindow::on_paletteFormulaYLineEdit_textEdited(const QString &)
+{
+    ui->applyPushButton->setEnabled(true);
+}
+
+void MandelbrotMainWindow::on_row0CheckBox_clicked()
+{
+    ui->applyPushButton->setEnabled(true);
+}
+
+void MandelbrotMainWindow::on_mandelbrotRadioButton_clicked()
+{
+    ui->applyPushButton->setEnabled(true);
+}
+
+void MandelbrotMainWindow::on_juliaRadioButton_clicked()
+{
+    ui->applyPushButton->setEnabled(true);
+}
+
+void MandelbrotMainWindow::on_juliaXLineEdit_textEdited(const QString &)
+{
+    ui->applyPushButton->setEnabled(true);
+}
+
+void MandelbrotMainWindow::on_juliaYLineEdit_textEdited(const QString &)
+{
+    ui->applyPushButton->setEnabled(true);
 }

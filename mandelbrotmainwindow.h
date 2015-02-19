@@ -58,9 +58,24 @@ private slots:
     void on_mandelbrotRadioButton_toggled(bool checked);
     void on_applyPushButton_clicked();
     void on_saveImagePushButton_clicked();
+    void on_formulaLineEdit_textEdited(const QString &);
+    void on_limitLineEdit_textEdited(const QString &);
+    void on_xLineEdit_textEdited(const QString &);
+    void on_yLineEdit_textEdited(const QString &);
+    void on_scaleLineEdit_textEdited(const QString &);
+    void on_iterationsLineEdit_textEdited(const QString &);
+    void on_paletteFormulaXLineEdit_textEdited(const QString &);
+    void on_col0CheckBox_clicked();
+    void on_paletteFormulaYLineEdit_textEdited(const QString &);
+    void on_row0CheckBox_clicked();
+    void on_mandelbrotRadioButton_clicked();
+    void on_juliaRadioButton_clicked();
+    void on_juliaXLineEdit_textEdited(const QString &);
+    void on_juliaYLineEdit_textEdited(const QString &);
 
     //render image slot, sometimes called as normal member
     void renderImage();
+
 private:
     Ui::MandelbrotMainWindow *ui;
 
