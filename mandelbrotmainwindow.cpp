@@ -493,7 +493,7 @@ void MandelbrotMainWindow::on_deleteConfigPushButton_clicked()
 void MandelbrotMainWindow::on_setColorPalettePushButton_clicked()
 {
     //user selects new color palette from image
-    QString fileName=QFileDialog::getOpenFileName(0,"Select color palette","./palettes","Image files (*.jpg; *.png; *.bmp)");
+    QString fileName=QFileDialog::getOpenFileName(0,"Select color palette","./palettes","Image files (*.jpg *.png *.bmp)");
     currentConfig.colorPaletteFileName=QDir(".").relativeFilePath(fileName);
     updateColorPalettePreview();
     ui->applyPushButton->setEnabled(true);
@@ -521,7 +521,7 @@ void MandelbrotMainWindow::on_applyPushButton_clicked()
 void MandelbrotMainWindow::on_saveImagePushButton_clicked()
 {
     //user wants to save rendered image to a file
-    QString fileName=QFileDialog::getSaveFileName(0,"Save image","./images","Image files (*.jpg; *.png; *.bmp)");
+    QString fileName=QFileDialog::getSaveFileName(0,"Save image","./images","Image files (*.jpg *.png *.bmp)");
     if(fileName!="")
         mandelbrotPixmapItem.pixmap().save(fileName);
 }
