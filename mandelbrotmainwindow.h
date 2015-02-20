@@ -99,6 +99,7 @@ private:
     QGraphicsRectItem zoomRect;
     static const int MIN_ZOOM_WIDTH;
     static const int MIN_ZOOM_HEIGHT;
+    static const int MIN_DRAG_DISTANCE_SQUARED;
     void zoomToRect(QRectF rect);
     void moveByOffset(QPoint offset);
 
@@ -131,6 +132,10 @@ private:
     //modified coloring formula to reduce banding
     static const QString DEFAULT_CONFIG_SMOOTH_COLORING_NAME;
     static const MandelbrotConfig DEFAULT_CONFIG_SMOOTH_COLORING;
+
+    static const int DEFAULT_ITERATIONS;
+    static const double DEFAULT_SCALE;
+    static const double DEFAULT_LIMIT;
 
     //default color palette
     QImage defaultPalette;

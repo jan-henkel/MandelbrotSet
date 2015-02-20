@@ -26,7 +26,7 @@ const MandelbrotConfig MandelbrotMainWindow::DEFAULT_CONFIG=
 const QString MandelbrotMainWindow::DEFAULT_CONFIG_SMOOTH_COLORING_NAME="Standard Mandelbrot (smooth coloring)";
 const MandelbrotConfig MandelbrotMainWindow::DEFAULT_CONFIG_SMOOTH_COLORING=
         {"z^2+c",                                           //formula
-        4.0,                                                //limit
+        20.0,                                                //limit
         -0.637011f,                                         //centerX
         -0.0395159f,                                        //centerY
         0.00403897f,                                        //scale
@@ -43,6 +43,12 @@ const MandelbrotConfig MandelbrotMainWindow::DEFAULT_CONFIG_SMOOTH_COLORING=
 
 const int MandelbrotMainWindow::MIN_ZOOM_WIDTH=20;
 const int MandelbrotMainWindow::MIN_ZOOM_HEIGHT=20;
+const int MandelbrotMainWindow::MIN_DRAG_DISTANCE_SQUARED=16;
+
+const int MandelbrotMainWindow::DEFAULT_ITERATIONS=100;
+const double MandelbrotMainWindow::DEFAULT_SCALE=0.007;
+const double MandelbrotMainWindow::DEFAULT_LIMIT=100.;
+
 const int MandelbrotMainWindow::PASSES=2;
 
 MandelbrotMainWindow::MandelbrotMainWindow(QWidget *parent) :
@@ -154,6 +160,8 @@ void MandelbrotMainWindow::receiveErrorCode(int errorCode)
         message="No errors.";
     else
     {
+        ui->renderProgressLabel->setVisible(false);
+        ui->renderProgressBar->setVisible(false);
         message="";
         if(errorCode&MandelbrotSet::FORMULA_PARSE_ERROR)
             message+="Error parsing formula. ";
@@ -236,10 +244,16 @@ bool MandelbrotMainWindow::eventFilter(QObject *target, QEvent *e)
             }
             if(event->buttons() & Qt::RightButton)
             {
-                //drag image to new position on render area, don't rerender yet
-                mandelbrotPixmapItem.setOffset(event->pos()-dragClickPos+preDragOffset);
-                ui->mandelbrotGraphicsView->update();
-                return true;
+                QPoint offset=event->pos()-dragClickPos;
+                if(offset.x()*offset.x()+offset.y()*offset.y()>=MIN_DRAG_DISTANCE_SQUARED)
+                {
+                    //drag image to new position on render area, don't rerender yet
+                    mandelbrotPixmapItem.setOffset(event->pos()-dragClickPos+preDragOffset);
+                    ui->mandelbrotGraphicsView->update();
+                    return true;
+                }
+                else
+                    mandelbrotPixmapItem.setOffset(preDragOffset);
             }
             QPoint p=QPoint(ui->mandelbrotGraphicsView->width()/2,ui->mandelbrotGraphicsView->height()/2);
             p=event->pos()-p;
@@ -261,10 +275,53 @@ bool MandelbrotMainWindow::eventFilter(QObject *target, QEvent *e)
             }
             else if(event->button() == Qt::RightButton)
             {
-                //rerender at new position
                 QPoint offset=event->pos()-dragClickPos;
-                moveByOffset(offset);
-                return true;
+                if(offset.x()*offset.x()+offset.y()*offset.y()>=MIN_DRAG_DISTANCE_SQUARED)
+                {
+                    //rerender at new position
+                    moveByOffset(offset);
+                    return true;
+                }
+                else
+                {
+                    //context menu
+                    QMenu menu;
+                    QAction* renderJuliaAction=menu.addAction("Explore Julia set");
+                    QAction* centerAction=menu.addAction("Center on this point");
+                    menu.move(ui->mandelbrotGraphicsView->viewport()->mapToGlobal(event->pos()));
+                    QAction* result=menu.exec();
+                    if(result==renderJuliaAction)
+                    {
+                        //render Julia set centered on 0 with c=(juliaRe,juliaIm) set to this point
+                        QPoint p=QPoint(ui->mandelbrotGraphicsView->width()/2,ui->mandelbrotGraphicsView->height()/2);
+                        p=event->pos()-p;
+                        currentConfig.julia=true;
+                        //order of assignments is important, since centerX, centerY, scale will be changed
+                        currentConfig.juliaIm=currentConfig.centerY+currentConfig.scale*p.y();
+                        currentConfig.juliaRe=currentConfig.centerX+currentConfig.scale*p.x();
+                        currentConfig.centerX=0;
+                        currentConfig.centerY=0;
+                        currentConfig.limit=DEFAULT_LIMIT;
+                        currentConfig.nIterations=DEFAULT_ITERATIONS;
+                        currentConfig.scale=DEFAULT_SCALE;
+                        updateConfigUI();
+                        applyCurrentConfig();
+                        renderImage();
+                        ui->applyPushButton->setEnabled(false);
+                        return true;
+                    }
+                    else if(result==centerAction)
+                    {
+                        QPoint p=QPoint(ui->mandelbrotGraphicsView->width()/2,ui->mandelbrotGraphicsView->height()/2);
+                        p=p-event->pos();
+                        moveByOffset(p);
+                        return true;
+                    }
+                    else
+                    {
+                        return true;
+                    }
+                }
             }
             break;
         }

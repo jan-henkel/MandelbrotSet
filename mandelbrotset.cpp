@@ -4,7 +4,7 @@
 
 const int REPORT_LINES_RENDERED=32;
 
-QRgb colorInterp(QColor col[4],double x,double y)
+inline QRgb colorInterp(QColor col[4],double x,double y)
 {
     return qRgb(
             (int)(((double)col[0].red()*(1.-x)+(double)col[1].red()*x)*(1.-y)+((double)col[2].red()*(1.-x)+(double)col[3].red()*x)*y),
