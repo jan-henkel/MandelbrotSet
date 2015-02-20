@@ -43,6 +43,7 @@ const MandelbrotConfig MandelbrotMainWindow::DEFAULT_CONFIG_SMOOTH_COLORING=
 
 const int MandelbrotMainWindow::MIN_ZOOM_WIDTH=20;
 const int MandelbrotMainWindow::MIN_ZOOM_HEIGHT=20;
+const int MandelbrotMainWindow::PASSES=2;
 
 MandelbrotMainWindow::MandelbrotMainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -64,10 +65,13 @@ MandelbrotMainWindow::MandelbrotMainWindow(QWidget *parent) :
     ui->mandelbrotGraphicsView->setMouseTracking(true);
     ui->mandelbrotGraphicsView->installEventFilter(this);
     ui->mandelbrotGraphicsView->viewport()->installEventFilter(this);
+    ui->renderProgressLabel->setVisible(false);
+    ui->renderProgressBar->setVisible(false);
 
     //set up communication between mandelbrotSet object and this window
     QObject::connect(&mandelbrotSet,SIGNAL(imageOut(QImage)),this,SLOT(updateImage(QImage)),Qt::QueuedConnection);
     QObject::connect(&mandelbrotSet,SIGNAL(errorCodeOut(int)),this,SLOT(receiveErrorCode(int)),Qt::QueuedConnection);
+    QObject::connect(&mandelbrotSet,SIGNAL(linesRendered(int)),ui->renderProgressBar,SLOT(setValue(int)),Qt::QueuedConnection);
     QObject::connect(this,SIGNAL(renderMandelbrot(double,double,int,int,double,int,double,int)),&mandelbrotSet,SLOT(renderMandelbrot(double,double,int,int,double,int,double,int)),Qt::QueuedConnection);
     QObject::connect(this,SIGNAL(renderJulia(double,double,int,int,double,int,double,int,double,double)),&mandelbrotSet,SLOT(renderJulia(double,double,int,int,double,int,double,int,double,double)),Qt::QueuedConnection);
     QObject::connect(this,SIGNAL(parseFormula(QString)),&mandelbrotSet,SLOT(parseFormula(QString)),Qt::QueuedConnection);
@@ -106,11 +110,20 @@ MandelbrotMainWindow::~MandelbrotMainWindow()
 
 void MandelbrotMainWindow::renderImage()
 {
+    //show render progress bar, set upper limit to number of lines to render
+    ui->renderProgressLabel->setVisible(true);
+    ui->renderProgressBar->setVisible(true);
+    ui->renderProgressBar->setRange(0,ui->mandelbrotGraphicsView->height()*PASSES);
+    ui->renderProgressBar->setValue(0);
+
+    //cancel ongoing render
+    mandelbrotSet.cancel();
+
     //render Mandelbrot- or Julia-type images depending on current configuration
     if(!currentConfig.julia)
-        emit renderMandelbrot(currentConfig.centerX,currentConfig.centerY,ui->mandelbrotGraphicsView->width(),ui->mandelbrotGraphicsView->height(),currentConfig.scale,currentConfig.nIterations,currentConfig.limit,2);
+        emit renderMandelbrot(currentConfig.centerX,currentConfig.centerY,ui->mandelbrotGraphicsView->width(),ui->mandelbrotGraphicsView->height(),currentConfig.scale,currentConfig.nIterations,currentConfig.limit,PASSES);
     else
-        emit renderJulia(currentConfig.centerX,currentConfig.centerY,ui->mandelbrotGraphicsView->width(),ui->mandelbrotGraphicsView->height(),currentConfig.scale,currentConfig.nIterations,currentConfig.limit,2,currentConfig.juliaRe,currentConfig.juliaIm);
+        emit renderJulia(currentConfig.centerX,currentConfig.centerY,ui->mandelbrotGraphicsView->width(),ui->mandelbrotGraphicsView->height(),currentConfig.scale,currentConfig.nIterations,currentConfig.limit,PASSES,currentConfig.juliaRe,currentConfig.juliaIm);
 }
 
 /*
@@ -128,6 +141,7 @@ void MandelbrotMainWindow::updateImage(QImage image)
     mandelbrotPixmap=QPixmap::fromImage(image);
     mandelbrotPixmapItem.setPos(0,0);
     mandelbrotPixmapItem.setOffset(0,0);
+    preDragOffset=QPoint(0,0);
     mandelbrotPixmapItem.setPixmap(mandelbrotPixmap);
     ui->mandelbrotGraphicsView->update();
 }
@@ -150,7 +164,6 @@ void MandelbrotMainWindow::receiveErrorCode(int errorCode)
     }
     ui->statusBar->showMessage(message,5000);
 }
-
 
 /*
  *
@@ -198,6 +211,7 @@ bool MandelbrotMainWindow::eventFilter(QObject *target, QEvent *e)
             {
                 //remember click position
                 dragClickPos=event->pos();
+                preDragOffset=mandelbrotPixmapItem.offset().toPoint();
                 return true;
             }
             break;
@@ -223,7 +237,7 @@ bool MandelbrotMainWindow::eventFilter(QObject *target, QEvent *e)
             if(event->buttons() & Qt::RightButton)
             {
                 //drag image to new position on render area, don't rerender yet
-                mandelbrotPixmapItem.setOffset(event->pos()-dragClickPos);
+                mandelbrotPixmapItem.setOffset(event->pos()-dragClickPos+preDragOffset);
                 ui->mandelbrotGraphicsView->update();
                 return true;
             }
@@ -756,4 +770,13 @@ void MandelbrotMainWindow::on_juliaXLineEdit_textEdited(const QString &)
 void MandelbrotMainWindow::on_juliaYLineEdit_textEdited(const QString &)
 {
     ui->applyPushButton->setEnabled(true);
+}
+
+void MandelbrotMainWindow::on_renderProgressBar_valueChanged(int value)
+{
+    if(value==ui->renderProgressBar->maximum())
+    {
+        ui->renderProgressLabel->setVisible(false);
+        ui->renderProgressBar->setVisible(false);
+    }
 }

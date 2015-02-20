@@ -72,9 +72,12 @@ private slots:
     void on_juliaRadioButton_clicked();
     void on_juliaXLineEdit_textEdited(const QString &);
     void on_juliaYLineEdit_textEdited(const QString &);
+    //progress bar slot
+    void on_renderProgressBar_valueChanged(int value);
 
     //render image slot, sometimes called as normal member
     void renderImage();
+
 
 private:
     Ui::MandelbrotMainWindow *ui;
@@ -82,6 +85,7 @@ private:
     //core calculation and rendering engine, works on seperate thread
     MandelbrotSet mandelbrotSet;
     QThread workerThread;
+    static const int PASSES;
 
     //contents of render area
     QPixmap mandelbrotPixmap;
@@ -90,6 +94,7 @@ private:
 
     //render area drag and zoom controls
     QPoint dragClickPos;
+    QPoint preDragOffset;
     QPoint zoomClickPos;
     QGraphicsRectItem zoomRect;
     static const int MIN_ZOOM_WIDTH;

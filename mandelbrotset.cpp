@@ -2,6 +2,8 @@
 #include <QMessageBox>
 #include <QColor>
 
+const int REPORT_LINES_RENDERED=32;
+
 QRgb colorInterp(QColor col[4],double x,double y)
 {
     return qRgb(
@@ -13,6 +15,10 @@ QRgb colorInterp(QColor col[4],double x,double y)
 
 void MandelbrotSet::renderMandelbrot(double xCenter, double yCenter, int width, int height, double scale, int nIterations, double limit, int nPasses)
 {
+    if(--cancel_>0)
+        return;
+    else
+        cancel_=0;
     emit errorCodeOut(errorCode_);
     if(errorCode_)
         return;
@@ -52,6 +58,11 @@ void MandelbrotSet::renderMandelbrot(double xCenter, double yCenter, int width, 
         for(int iy=0;iy<height;++iy)
         {
             unsigned long *scanline=reinterpret_cast<unsigned long*>(image.scanLine(iy));
+            if(cancel_)
+            {
+                --cancel_;
+                return;
+            }
             for(int ix=0;ix<width;++ix)
             {
                 double x=(ix-halfWidth)*scale+xCenter;
@@ -111,13 +122,20 @@ void MandelbrotSet::renderMandelbrot(double xCenter, double yCenter, int width, 
                     col[i]=QColor(palette[index[i]]);
                 scanline[ix]=colorInterp(col,xPal-ixPal,yPal-iyPal);
             }
+            if(iy%REPORT_LINES_RENDERED==0)
+                emit linesRendered(height*pass+iy+1);
         }
+        emit linesRendered(height*(pass+1));
         emit imageOut(image);
     }
 }
 
 void MandelbrotSet::renderJulia(double xCenter, double yCenter, int width, int height, double scale, int nIterations, double limit, int nPasses, double cRe, double cIm)
 {
+    if(--cancel_>0)
+        return;
+    else
+        cancel_=0;
     emit errorCodeOut(errorCode_);
     if(errorCode_)
         return;
@@ -157,6 +175,11 @@ void MandelbrotSet::renderJulia(double xCenter, double yCenter, int width, int h
         for(int iy=0;iy<height;++iy)
         {
             unsigned long *scanline=reinterpret_cast<unsigned long*>(image.scanLine(iy));
+            if(cancel_)
+            {
+                --cancel_;
+                return;
+            }
             for(int ix=0;ix<width;++ix)
             {
                 double x=(ix-halfWidth)*scale+xCenter;
@@ -215,7 +238,10 @@ void MandelbrotSet::renderJulia(double xCenter, double yCenter, int width, int h
                     col[i]=QColor(palette[index[i]]);
                 scanline[ix]=colorInterp(col,xPal-ixPal,yPal-iyPal);
             }
+            if(iy%REPORT_LINES_RENDERED==0)
+                emit linesRendered(height*pass+iy+1);
         }
+        emit linesRendered(height*(pass+1));
         emit imageOut(image);
     }
 }
