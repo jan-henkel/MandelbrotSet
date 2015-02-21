@@ -458,6 +458,16 @@ private:
             while(newpos<str.length() && str[newpos]>='0' && str[newpos]<='9')
                 ++newpos;
         }
+        if(newpos<str.length() && str[newpos].toLower()=='e')
+        {
+            ++newpos;
+            if(newpos<str.length() && str[newpos]=='-')
+                ++newpos;
+            while(newpos<str.length() && str[newpos]>='0' && str[newpos]<='9')
+                ++newpos;
+            if(str[newpos-1].toLower()=='e' || str[newpos-1]=='-')
+                return 0;
+        }
         C val=str.mid(pos,newpos-pos).toDouble();
         mathEval->writeInstr(PUSHVAL);
         mathEval->writeVal(val);
