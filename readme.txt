@@ -4,6 +4,13 @@ INTRODUCTION
 MandelbrotSet is an image generator for Mandelbrot- and Julia-type sets
 written in C++ and Qt. The author is Jan Henkel.
 
+INSTALLATION
+============
+
+For binary packages simply unpack the archive.
+If you're building the application from source, copy the contents of the
+'install' folder to the build directory.
+
 MATHEMATICAL BACKGROUND
 =======================
 
