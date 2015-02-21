@@ -501,8 +501,7 @@ void MandelbrotMainWindow::on_setColorPalettePushButton_clicked()
 
 void MandelbrotMainWindow::on_mandelbrotRadioButton_toggled(bool checked)
 {
-    //user changes mode to Mandelbrot- or Julia-type images
-    currentConfig.julia=!checked;
+    //user changes mode to Mandelbrot- or Julia-type images, modify UI accordingly
     ui->juliaXLabel->setVisible(!checked);
     ui->juliaXLineEdit->setVisible(!checked);
     ui->juliaYLabel->setVisible(!checked);
