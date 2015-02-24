@@ -1,7 +1,6 @@
 #include "mandelbrotset.h"
 #include <QMessageBox>
 #include <QColor>
-
 const int REPORT_LINES_RENDERED=32;
 
 inline QRgb colorInterp(QColor col[4],double x,double y)
@@ -28,10 +27,10 @@ void MandelbrotSet::renderMandelbrot(double xCenter, double yCenter, int width, 
     int paletteWidth=colorPalette_.width();
     int paletteHeight=colorPalette_.height();
     unsigned long *palette=reinterpret_cast<unsigned long*>(colorPalette_.scanLine(0));
-    //z=z(n), c=Complex(x,y) with coordinates x and y on the complex plane corresponding to points of the image
-    Complex *ec=eval_.getVarPtr('c'),*ez=eval_.getVarPtr('z');
+    //z=z(n), c=std::complex<double>(x,y) with coordinates x and y on the complex plane corresponding to points of the image
+    std::complex<double> *ec=eval_.getVarPtr('c'),*ez=eval_.getVarPtr('z');
     //imaginary unit i
-    (*eval_.getVarPtr('i'))=Complex(0.0,1.0);
+    (*eval_.getVarPtr('i'))=std::complex<double>(0.0,1.0);
     //s=Re(z), t=Im(z) when iteration loop is done
     double *e1s=paletteXeval_.getVarPtr('s'), *e1t=paletteXeval_.getVarPtr('t');
     double *e2s=paletteYeval_.getVarPtr('s'), *e2t=paletteYeval_.getVarPtr('t');
@@ -68,19 +67,19 @@ void MandelbrotSet::renderMandelbrot(double xCenter, double yCenter, int width, 
                 double x=(ix-halfWidth)*scale+xCenter;
                 double y=(iy-halfHeight)*scale+yCenter;
 
-                *ec=Complex(x,y);
-                *ez=Complex(0,0);
+                *ec=std::complex<double>(x,y);
+                *ez=std::complex<double>(0,0);
                 int it=0;
-                while(it<nIt && ez->norm2()<=limit)
+                while(it<nIt && (ez->real()*ez->real()+ez->imag()*ez->imag())<=limit)
                 {
                     eval_.run();
                     *ez=eval_.result();
                     ++it;
                 }
-                *e1s=*e2s=ez->R();
-                *e1t=*e2t=ez->I();
-                *e1u=*e2u=ec->R();
-                *e1v=*e2v=ec->I();
+                *e1s=*e2s=ez->real();
+                *e1t=*e2t=ez->imag();
+                *e1u=*e2u=ec->real();
+                *e1v=*e2v=ec->imag();
                 *e1n=*e2n=(double)it;
                 double xPal,yPal;
                 int ixPal,iyPal;
@@ -145,9 +144,9 @@ void MandelbrotSet::renderJulia(double xCenter, double yCenter, int width, int h
     int paletteWidth=colorPalette_.width();
     int paletteHeight=colorPalette_.height();
     unsigned long *palette=reinterpret_cast<unsigned long*>(colorPalette_.scanLine(0));
-    Complex *ec=eval_.getVarPtr('c'),*ez=eval_.getVarPtr('z');
+    std::complex<double> *ec=eval_.getVarPtr('c'),*ez=eval_.getVarPtr('z');
     //imaginary unit i
-    (*eval_.getVarPtr('i'))=Complex(0.0,1.0);
+    (*eval_.getVarPtr('i'))=std::complex<double>(0.0,1.0);
     //s=Re(z), t=Im(z) when iteration loop is done
     double *e1s=paletteXeval_.getVarPtr('s'), *e1t=paletteXeval_.getVarPtr('t');
     double *e2s=paletteYeval_.getVarPtr('s'), *e2t=paletteYeval_.getVarPtr('t');
@@ -166,7 +165,7 @@ void MandelbrotSet::renderJulia(double xCenter, double yCenter, int width, int h
     *e1l=*e2l=limit;
     *e1w=*e2w=(double)paletteWidth;
     *e1h=*e2h=(double)paletteHeight;
-    *ec=Complex(cRe,cIm);
+    *ec=std::complex<double>(cRe,cIm);
     col0Interior_&=(paletteWidth>1);
     row0Interior_&=(paletteHeight>1);
     for(int pass=0;pass<nPasses;++pass)
@@ -185,16 +184,16 @@ void MandelbrotSet::renderJulia(double xCenter, double yCenter, int width, int h
                 double x=(ix-halfWidth)*scale+xCenter;
                 double y=(iy-halfHeight)*scale+yCenter;
 
-                *ez=Complex(x,y);
+                *ez=std::complex<double>(x,y);
                 int it=0;
-                while(it<nIt && ez->norm2()<=limit)
+                while(it<nIt && (ez->real()*ez->real()+ez->imag()+ez->imag())<=limit)
                 {
                     eval_.run();
                     *ez=eval_.result();
                     ++it;
                 }
-                *e1s=*e2s=ez->R();
-                *e1t=*e2t=ez->I();
+                *e1s=*e2s=ez->real();
+                *e1t=*e2t=ez->imag();
                 *e1u=*e2u=x;
                 *e1v=*e2v=y;
                 *e1n=*e2n=(double)it;

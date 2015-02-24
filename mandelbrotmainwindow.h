@@ -11,7 +11,7 @@
 #include <QFileDialog>
 #include "mandelbrotset.h"
 #include "mathparser.h"
-#include "complex.h"
+#include <complex>
 #include <map>
 #include <utility>
 #include <QTimer>

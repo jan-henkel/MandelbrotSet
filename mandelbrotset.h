@@ -5,8 +5,9 @@
 #include <QObject>
 #include <QColor>
 #include <QString>
-#include "complex.h"
+#include <complex>
 #include "mathparser.h"
+
 
 struct MandelbrotConfig
 {
@@ -61,10 +62,10 @@ signals:
     void errorCodeOut(int errorCode);
     void linesRendered(int lines);
 private:
-    MathParser<Complex> parser_;
+    MathParser<std::complex<double> > parser_;
     MathParser<double> paletteXparser_;
     MathParser<double> paletteYparser_;
-    MathEval<Complex> eval_;
+    MathEval<std::complex<double> > eval_;
     MathEval<double> paletteXeval_;
     MathEval<double> paletteYeval_;
     int errorCode_;
