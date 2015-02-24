@@ -186,7 +186,7 @@ void MandelbrotSet::renderJulia(double xCenter, double yCenter, int width, int h
 
                 *ez=std::complex<double>(x,y);
                 int it=0;
-                while(it<nIt && (ez->real()*ez->real()+ez->imag()+ez->imag())<=limit)
+                while(it<nIt && (ez->real()*ez->real()+ez->imag()*ez->imag())<=limit)
                 {
                     eval_.run();
                     *ez=eval_.result();
