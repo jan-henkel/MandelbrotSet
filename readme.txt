@@ -148,7 +148,7 @@ s,t		real and imaginary parts of z when the iteration loop
 		is done
 				
 u,v		real and imaginary parts of c - in the case of Julia type
-		sets, the initial value of z is taken instead of c
+		sets, the initial value of z is used instead of c
 
 n		the number of iterations when either the escape criterion
 		is met (i.e. the limit is exceeded) or the maximum number

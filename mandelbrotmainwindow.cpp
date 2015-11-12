@@ -41,15 +41,15 @@ const MandelbrotConfig MandelbrotMainWindow::DEFAULT_CONFIG_SMOOTH_COLORING=
         0.0                                                 //juliaIm
         };
 
-const int MandelbrotMainWindow::MIN_ZOOM_WIDTH=20;
-const int MandelbrotMainWindow::MIN_ZOOM_HEIGHT=20;
-const int MandelbrotMainWindow::MIN_DRAG_DISTANCE_SQUARED=16;
+const qint32 MandelbrotMainWindow::MIN_ZOOM_WIDTH=20;
+const qint32 MandelbrotMainWindow::MIN_ZOOM_HEIGHT=20;
+const qint32 MandelbrotMainWindow::MIN_DRAG_DISTANCE_SQUARED=16;
 
-const int MandelbrotMainWindow::DEFAULT_ITERATIONS=100;
+const qint32 MandelbrotMainWindow::DEFAULT_ITERATIONS=100;
 const double MandelbrotMainWindow::DEFAULT_SCALE=0.007;
 const double MandelbrotMainWindow::DEFAULT_LIMIT=100.;
 
-const int MandelbrotMainWindow::PASSES=2;
+const qint32 MandelbrotMainWindow::PASSES=2;
 
 MandelbrotMainWindow::MandelbrotMainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -152,7 +152,7 @@ void MandelbrotMainWindow::updateImage(QImage image)
     ui->mandelbrotGraphicsView->update();
 }
 
-void MandelbrotMainWindow::receiveErrorCode(int errorCode)
+void MandelbrotMainWindow::receiveErrorCode(qint32 errorCode)
 {
     //show errors in status bar
     QString message;
@@ -197,7 +197,7 @@ bool MandelbrotMainWindow::eventFilter(QObject *target, QEvent *e)
             {
                 //remember click position, add zoom rectangle of minimal size to render area
                 zoomClickPos=event->pos();
-                int w,h,renderWidth,renderHeight;
+                qint32 w,h,renderWidth,renderHeight;
                 w=MIN_ZOOM_WIDTH;
                 h=MIN_ZOOM_HEIGHT;
                 renderWidth=ui->mandelbrotGraphicsView->width();
@@ -231,7 +231,7 @@ bool MandelbrotMainWindow::eventFilter(QObject *target, QEvent *e)
             {
                 //update zoom rectangle
                 QPoint d=((QMouseEvent*)e)->pos()-zoomClickPos;
-                int w,h,renderWidth,renderHeight;
+                qint32 w,h,renderWidth,renderHeight;
                 renderWidth=ui->mandelbrotGraphicsView->width();
                 renderHeight=ui->mandelbrotGraphicsView->height();
                 w=(d.x()<MIN_ZOOM_WIDTH)?MIN_ZOOM_WIDTH:d.x();
@@ -388,9 +388,9 @@ bool MandelbrotMainWindow::eventFilter(QObject *target, QEvent *e)
         case QEvent::MouseMove:
         {
             QMouseEvent* event=(QMouseEvent*)e;
-            int w1=ui->colorPalettePreviewLabel->pixmap()->width(),w2=ui->colorPalettePreviewLabel->width();
-            int h1=ui->colorPalettePreviewLabel->pixmap()->height(),h2=ui->colorPalettePreviewLabel->height();
-            int offset=ui->colorPalettePreviewLabel->frameWidth();
+            qint32 w1=ui->colorPalettePreviewLabel->pixmap()->width(),w2=ui->colorPalettePreviewLabel->width();
+            qint32 h1=ui->colorPalettePreviewLabel->pixmap()->height(),h2=ui->colorPalettePreviewLabel->height();
+            qint32 offset=ui->colorPalettePreviewLabel->frameWidth();
             ui->statusBar->showMessage("X="+QString::number(((event->pos().x()-offset)*w1)/w2)+" Y="+QString::number(((event->pos().y()-offset)*h1)/h2),5000);
             break;
         }
@@ -690,9 +690,9 @@ void MandelbrotMainWindow::updateColorPalettePreview()
     ui->colorPalettePreviewLabel->setPixmap(QPixmap::fromImage(palette));
 }
 
-int MandelbrotMainWindow::setConfigToUIContents()
+qint32 MandelbrotMainWindow::setConfigToUIContents()
 {
-    int errorCode=0;
+    qint32 errorCode=0;
     bool ok;
     currentConfig.formula=ui->formulaLineEdit->text();
     currentConfig.limit=ui->limitLineEdit->text().toDouble(&ok);
@@ -726,8 +726,8 @@ int MandelbrotMainWindow::setConfigToUIContents()
 
 void MandelbrotMainWindow::generateDefaultPalette()
 {
-    static const int width=256;
-    static const int ncolors=8;
+    static const qint32 width=256;
+    static const qint32 ncolors=8;
     defaultPalette=QImage(width,1,QImage::Format_RGB32);
     QColor colors[]=
     {
@@ -740,15 +740,15 @@ void MandelbrotMainWindow::generateDefaultPalette()
         QColor(255,255,70),
         QColor(255,255,255)
     };
-    ((unsigned long*)defaultPalette.scanLine(0))[0]=(unsigned long)qRgb(0,0,0);
+    ((quint32*)defaultPalette.scanLine(0))[0]=(quint32)qRgb(0,0,0);
     double seglength=(double)width/(double)(ncolors-1);
-    int seg;
+    qint32 seg;
     double pos;
-    for(int i=1;i<width;++i)
+    for(qint32 i=1;i<width;++i)
     {
         seg=i*(ncolors-1)/width;
         pos=((double)i-seg*seglength)/seglength;
-        ((unsigned long*)defaultPalette.scanLine(0))[i]=(unsigned long)qRgb(
+        ((quint32*)defaultPalette.scanLine(0))[i]=(quint32)qRgb(
                 colors[seg].red()*(1-pos)+colors[seg+1].red()*pos,
                 colors[seg].green()*(1-pos)+colors[seg+1].green()*pos,
                 colors[seg].blue()*(1-pos)+colors[seg+1].blue()*pos
@@ -828,7 +828,7 @@ void MandelbrotMainWindow::on_juliaYLineEdit_textEdited(const QString &)
     ui->applyPushButton->setEnabled(true);
 }
 
-void MandelbrotMainWindow::on_renderProgressBar_valueChanged(int value)
+void MandelbrotMainWindow::on_renderProgressBar_valueChanged(qint32 value)
 {
     if(value==ui->renderProgressBar->maximum())
     {

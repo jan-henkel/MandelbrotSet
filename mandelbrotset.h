@@ -16,7 +16,7 @@ struct MandelbrotConfig
     double centerX;
     double centerY;
     double scale;
-    int nIterations;
+    qint32 nIterations;
     QString colorPaletteFileName;
     QString paletteFormulaX;
     bool col0interior;
@@ -49,8 +49,8 @@ public:
     ~MandelbrotSet() {}
     void cancel() {++cancel_;}
 public slots:
-    void renderMandelbrot(double xCenter,double yCenter, int width, int height, double scale, int nIterations, double limit, int nPasses);
-    void renderJulia(double xCenter,double yCenter, int width, int height, double scale, int nIterations, double limit, int nPasses, double cRe, double cIm);
+    void renderMandelbrot(double xCenter,double yCenter, qint32 width, qint32 height, double scale, qint32 nIterations, double limit, qint32 nPasses);
+    void renderJulia(double xCenter,double yCenter, qint32 width, qint32 height, double scale, qint32 nIterations, double limit, qint32 nPasses, double cRe, double cIm);
     void setColorPalette(QImage colorPalette) {colorPalette_=colorPalette;}
     void parseFormula(QString str) {parser_.setString(str); if(!parser_.parse()) {errorCode_|=FORMULA_PARSE_ERROR;} else {errorCode_&=~FORMULA_PARSE_ERROR;}}
     void parsePaletteXFormula(QString str) {paletteXparser_.setString(str); if(!paletteXparser_.parse()) {errorCode_|=PALETTE_XFORMULA_PARSE_ERROR;} else {errorCode_&=~PALETTE_XFORMULA_PARSE_ERROR;}}
@@ -59,8 +59,8 @@ public slots:
     void setRow0Interior(bool b) {row0Interior_=b;}
 signals:
     void imageOut(QImage image);
-    void errorCodeOut(int errorCode);
-    void linesRendered(int lines);
+    void errorCodeOut(qint32 errorCode);
+    void linesRendered(qint32 lines);
 private:
     MathParser<std::complex<double> > parser_;
     MathParser<double> paletteXparser_;
@@ -68,11 +68,11 @@ private:
     MathEval<std::complex<double> > eval_;
     MathEval<double> paletteXeval_;
     MathEval<double> paletteYeval_;
-    int errorCode_;
+    qint32 errorCode_;
     QImage colorPalette_;
     bool col0Interior_;
     bool row0Interior_;
-    int cancel_;
+    qint32 cancel_;
 };
 
 #endif // MANDELBROTSET_H

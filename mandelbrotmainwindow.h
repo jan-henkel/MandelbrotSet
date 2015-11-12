@@ -29,8 +29,8 @@ public:
     ~MandelbrotMainWindow();
 signals:
     //signals for rendering images in another thread
-    void renderMandelbrot(double xCenter,double yCenter, int width, int height, double scale, int nIterations, double limit, int nPasses);
-    void renderJulia(double xCenter,double yCenter, int width, int height, double scale, int nIterations, double limit, int nPasses, double cRe, double cIm);
+    void renderMandelbrot(double xCenter,double yCenter, qint32 width, qint32 height, double scale, qint32 nIterations, double limit, qint32 nPasses);
+    void renderJulia(double xCenter,double yCenter, qint32 width, qint32 height, double scale, qint32 nIterations, double limit, qint32 nPasses, double cRe, double cIm);
     //signals for changing settings of the MandelbrotSet instance which takes care of calculation and rendering
     void parseFormula(QString formula);
     void parsePaletteXFormula(QString formula);
@@ -41,7 +41,7 @@ signals:
 public slots:
     //processing of incoming signals from worker thread
     void updateImage(QImage image);
-    void receiveErrorCode(int errorCode);
+    void receiveErrorCode(qint32 errorCode);
 protected:
     virtual void resizeEvent(QResizeEvent *e);
     //event filter to intercept mouse events on the render area
@@ -73,7 +73,7 @@ private slots:
     void on_juliaXLineEdit_textEdited(const QString &);
     void on_juliaYLineEdit_textEdited(const QString &);
     //progress bar slot
-    void on_renderProgressBar_valueChanged(int value);
+    void on_renderProgressBar_valueChanged(qint32 value);
 
     //render image slot, sometimes called as normal member
     void renderImage();
@@ -85,7 +85,7 @@ private:
     //core calculation and rendering engine, works on seperate thread
     MandelbrotSet mandelbrotSet;
     QThread workerThread;
-    static const int PASSES;
+    static const qint32 PASSES;
 
     //contents of render area
     QPixmap mandelbrotPixmap;
@@ -97,9 +97,9 @@ private:
     QPoint preDragOffset;
     QPoint zoomClickPos;
     QGraphicsRectItem zoomRect;
-    static const int MIN_ZOOM_WIDTH;
-    static const int MIN_ZOOM_HEIGHT;
-    static const int MIN_DRAG_DISTANCE_SQUARED;
+    static const qint32 MIN_ZOOM_WIDTH;
+    static const qint32 MIN_ZOOM_HEIGHT;
+    static const qint32 MIN_DRAG_DISTANCE_SQUARED;
     void zoomToRect(QRectF rect);
     void moveByOffset(QPoint offset);
 
@@ -124,7 +124,7 @@ private:
     void updateColorPalettePreview();
 
     //update config to reflect UI contents, return an error code specifying which assignments went wrong
-    int setConfigToUIContents();
+    qint32 setConfigToUIContents();
 
     //default config
     static const QString DEFAULT_CONFIG_NAME;
@@ -133,7 +133,7 @@ private:
     static const QString DEFAULT_CONFIG_SMOOTH_COLORING_NAME;
     static const MandelbrotConfig DEFAULT_CONFIG_SMOOTH_COLORING;
 
-    static const int DEFAULT_ITERATIONS;
+    static const qint32 DEFAULT_ITERATIONS;
     static const double DEFAULT_SCALE;
     static const double DEFAULT_LIMIT;
 

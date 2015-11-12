@@ -1,7 +1,7 @@
 #include "mandelbrotset.h"
 #include <QMessageBox>
 #include <QColor>
-const int REPORT_LINES_RENDERED=32;
+const qint32 REPORT_LINES_RENDERED=32;
 
 inline QRgb colorInterp(QColor col[4],double x,double y)
 {
@@ -12,7 +12,7 @@ inline QRgb colorInterp(QColor col[4],double x,double y)
             );
 }
 
-void MandelbrotSet::renderMandelbrot(double xCenter, double yCenter, int width, int height, double scale, int nIterations, double limit, int nPasses)
+void MandelbrotSet::renderMandelbrot(double xCenter, double yCenter, qint32 width, qint32 height, double scale, qint32 nIterations, double limit, qint32 nPasses)
 {
     if(--cancel_>0)
         return;
@@ -21,12 +21,12 @@ void MandelbrotSet::renderMandelbrot(double xCenter, double yCenter, int width, 
     emit errorCodeOut(errorCode_);
     if(errorCode_)
         return;
-    int halfWidth=width/2;
-    int halfHeight=height/2;
+    qint32 halfWidth=width/2;
+    qint32 halfHeight=height/2;
     QImage image(width,height,QImage::Format_RGB32);
-    int paletteWidth=colorPalette_.width();
-    int paletteHeight=colorPalette_.height();
-    unsigned long *palette=reinterpret_cast<unsigned long*>(colorPalette_.scanLine(0));
+    qint32 paletteWidth=colorPalette_.width();
+    qint32 paletteHeight=colorPalette_.height();
+    quint32 *palette=reinterpret_cast<quint32*>(colorPalette_.scanLine(0));
     //z=z(n), c=std::complex<double>(x,y) with coordinates x and y on the complex plane corresponding to points of the image
     std::complex<double> *ec=eval_.getVarPtr('c'),*ez=eval_.getVarPtr('z');
     //imaginary unit i
@@ -50,26 +50,26 @@ void MandelbrotSet::renderMandelbrot(double xCenter, double yCenter, int width, 
     *e1h=*e2h=(double)paletteHeight;
     col0Interior_&=(paletteWidth>1);
     row0Interior_&=(paletteHeight>1);
-    const int upperLimit=(1<<(sizeof(int)*8-2));
-    for(int pass=0;pass<nPasses;++pass)
+    const qint32 upperLimit=(1<<(sizeof(int)*8-2));
+    for(qint32 pass=0;pass<nPasses;++pass)
     {
-        int nIt=nIterations>>(2*(nPasses-pass-1));
-        for(int iy=0;iy<height;++iy)
+        qint32 nIt=nIterations>>(2*(nPasses-pass-1));
+        for(qint32 iy=0;iy<height;++iy)
         {
-            unsigned long *scanline=reinterpret_cast<unsigned long*>(image.scanLine(iy));
+            quint32 *scanline=reinterpret_cast<quint32*>(image.scanLine(iy));
             if(cancel_)
             {
                 --cancel_;
                 return;
             }
-            for(int ix=0;ix<width;++ix)
+            for(qint32 ix=0;ix<width;++ix)
             {
                 double x=(ix-halfWidth)*scale+xCenter;
                 double y=(iy-halfHeight)*scale+yCenter;
 
                 *ec=std::complex<double>(x,y);
                 *ez=std::complex<double>(0,0);
-                int it=0;
+                qint32 it=0;
                 while(it<nIt && (ez->real()*ez->real()+ez->imag()*ez->imag())<=limit)
                 {
                     eval_.run();
@@ -82,7 +82,7 @@ void MandelbrotSet::renderMandelbrot(double xCenter, double yCenter, int width, 
                 *e1v=*e2v=ec->imag();
                 *e1n=*e2n=(double)it;
                 double xPal,yPal;
-                int ixPal,iyPal;
+                qint32 ixPal,iyPal;
                 paletteXeval_.run();
                 paletteYeval_.run();
                 xPal=paletteXeval_.result();
@@ -91,7 +91,7 @@ void MandelbrotSet::renderMandelbrot(double xCenter, double yCenter, int width, 
                 yPal=(yPal<0 || yPal>upperLimit || yPal!=yPal)?0:yPal;
                 ixPal=(int)xPal;
                 iyPal=(int)yPal;
-                int index[4];
+                qint32 index[4];
                 QColor col[4];
                 if(it==nIt)
                 {
@@ -117,7 +117,7 @@ void MandelbrotSet::renderMandelbrot(double xCenter, double yCenter, int width, 
                     index[2]=(int)col0Interior_+(int)row0Interior_*paletteWidth+ixPal%(paletteWidth-(int)col0Interior_)+((iyPal+1)%(paletteHeight-(int)row0Interior_))*paletteWidth;
                     index[3]=(int)col0Interior_+(int)row0Interior_*paletteWidth+(ixPal+1)%(paletteWidth-(int)col0Interior_)+((iyPal+1)%(paletteHeight-(int)row0Interior_))*paletteWidth;
                 }
-                for(int i=0;i<4;++i)
+                for(qint32 i=0;i<4;++i)
                     col[i]=QColor(palette[index[i]]);
                 scanline[ix]=colorInterp(col,xPal-ixPal,yPal-iyPal);
             }
@@ -129,7 +129,7 @@ void MandelbrotSet::renderMandelbrot(double xCenter, double yCenter, int width, 
     }
 }
 
-void MandelbrotSet::renderJulia(double xCenter, double yCenter, int width, int height, double scale, int nIterations, double limit, int nPasses, double cRe, double cIm)
+void MandelbrotSet::renderJulia(double xCenter, double yCenter, qint32 width, qint32 height, double scale, qint32 nIterations, double limit, qint32 nPasses, double cRe, double cIm)
 {
     if(--cancel_>0)
         return;
@@ -138,12 +138,12 @@ void MandelbrotSet::renderJulia(double xCenter, double yCenter, int width, int h
     emit errorCodeOut(errorCode_);
     if(errorCode_)
         return;
-    int halfWidth=width/2;
-    int halfHeight=height/2;
+    qint32 halfWidth=width/2;
+    qint32 halfHeight=height/2;
     QImage image(width,height,QImage::Format_RGB32);
-    int paletteWidth=colorPalette_.width();
-    int paletteHeight=colorPalette_.height();
-    unsigned long *palette=reinterpret_cast<unsigned long*>(colorPalette_.scanLine(0));
+    qint32 paletteWidth=colorPalette_.width();
+    qint32 paletteHeight=colorPalette_.height();
+    quint32 *palette=reinterpret_cast<quint32*>(colorPalette_.scanLine(0));
     std::complex<double> *ec=eval_.getVarPtr('c'),*ez=eval_.getVarPtr('z');
     //imaginary unit i
     (*eval_.getVarPtr('i'))=std::complex<double>(0.0,1.0);
@@ -160,7 +160,7 @@ void MandelbrotSet::renderJulia(double xCenter, double yCenter, int width, int h
     double *e1w=paletteXeval_.getVarPtr('w'), *e1h=paletteXeval_.getVarPtr('h');
     double *e2w=paletteYeval_.getVarPtr('w'), *e2h=paletteYeval_.getVarPtr('h');
 
-    const int upperLimit=(1<<(sizeof(int)*8-2));
+    const qint32 upperLimit=(1<<(sizeof(int)*8-2));
     *e1m=*e2m=(double)nIterations;
     *e1l=*e2l=limit;
     *e1w=*e2w=(double)paletteWidth;
@@ -168,24 +168,24 @@ void MandelbrotSet::renderJulia(double xCenter, double yCenter, int width, int h
     *ec=std::complex<double>(cRe,cIm);
     col0Interior_&=(paletteWidth>1);
     row0Interior_&=(paletteHeight>1);
-    for(int pass=0;pass<nPasses;++pass)
+    for(qint32 pass=0;pass<nPasses;++pass)
     {
-        int nIt=nIterations>>(2*(nPasses-pass-1));
-        for(int iy=0;iy<height;++iy)
+        qint32 nIt=nIterations>>(2*(nPasses-pass-1));
+        for(qint32 iy=0;iy<height;++iy)
         {
-            unsigned long *scanline=reinterpret_cast<unsigned long*>(image.scanLine(iy));
+            quint32 *scanline=reinterpret_cast<quint32*>(image.scanLine(iy));
             if(cancel_)
             {
                 --cancel_;
                 return;
             }
-            for(int ix=0;ix<width;++ix)
+            for(qint32 ix=0;ix<width;++ix)
             {
                 double x=(ix-halfWidth)*scale+xCenter;
                 double y=(iy-halfHeight)*scale+yCenter;
 
                 *ez=std::complex<double>(x,y);
-                int it=0;
+                qint32 it=0;
                 while(it<nIt && (ez->real()*ez->real()+ez->imag()*ez->imag())<=limit)
                 {
                     eval_.run();
@@ -198,7 +198,7 @@ void MandelbrotSet::renderJulia(double xCenter, double yCenter, int width, int h
                 *e1v=*e2v=y;
                 *e1n=*e2n=(double)it;
                 double xPal,yPal;
-                int ixPal,iyPal;
+                qint32 ixPal,iyPal;
                 paletteXeval_.run();
                 paletteYeval_.run();
                 xPal=paletteXeval_.result();
@@ -207,7 +207,7 @@ void MandelbrotSet::renderJulia(double xCenter, double yCenter, int width, int h
                 yPal=(yPal<0 || yPal>upperLimit || yPal!=yPal)?0:yPal;
                 ixPal=(int)xPal;
                 iyPal=(int)yPal;
-                int index[4];
+                qint32 index[4];
                 QColor col[4];
                 if(it==nIt)
                 {
@@ -233,7 +233,7 @@ void MandelbrotSet::renderJulia(double xCenter, double yCenter, int width, int h
                     index[2]=(int)col0Interior_+(int)row0Interior_*paletteWidth+ixPal%(paletteWidth-(int)col0Interior_)+((iyPal+1)%(paletteHeight-(int)row0Interior_))*paletteWidth;
                     index[3]=(int)col0Interior_+(int)row0Interior_*paletteWidth+(ixPal+1)%(paletteWidth-(int)col0Interior_)+((iyPal+1)%(paletteHeight-(int)row0Interior_))*paletteWidth;
                 }
-                for(int i=0;i<4;++i)
+                for(qint32 i=0;i<4;++i)
                     col[i]=QColor(palette[index[i]]);
                 scanline[ix]=colorInterp(col,xPal-ixPal,yPal-iyPal);
             }

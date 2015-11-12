@@ -15,10 +15,10 @@ typedef QChar Char;
 
 extern Char op[NUMOP];
 extern String funcName[NUMFUNC];
-extern int funcNumArgs[NUMFUNC];
+extern qint32 funcNumArgs[NUMFUNC];
 enum Instruction{PUSHVAR,PUSHVAL,ADD,PVARADD,PVALADD,SUB,PVARSUB,PVALSUB,MULT,PVARMULT,PVALMULT,DIV,PVARDIV,PVALDIV,INV,PVARINV,PVALINV,POW_N,PVARPOW_N,PVALPOW_N,POW,PVARPOW,PVALPOW,SIN,PVARSIN,PVALSIN,COS,PVARCOS,PVALCOS,TAN,PVARTAN,PVALTAN,EXP,PVAREXP,PVALEXP,LOG,PVARLOG,PVALLOG,RE,PVARRE,PVALRE,IM,PVARIM,PVALIM,SQRT,PVARSQRT,PVALSQRT,NEG,PVARNEG,PVALNEG,ABS,PVARABS,PVALABS,ASIN,PVARASIN,PVALASIN,ACOS,PVARACOS,PVALACOS,ATAN,PVARATAN,PVALATAN,SINH,PVARSINH,PVALSINH,COSH,PVARCOSH,PVALCOSH,TANH,PVARTANH,PVALTANH,ASINH,PVARASINH,PVALASINH,ACOSH,PVARACOSH,PVALACOSH,ATANH,PVARATANH,PVALATANH};
-extern int opcode[NUMOP];
-extern int funcCode[NUMFUNC];
+extern qint32 opcode[NUMOP];
+extern qint32 funcCode[NUMFUNC];
 
 extern double Re(double);
 extern double Im(double);
@@ -33,7 +33,7 @@ public:
     void reset(){instrptr=instructionList; stackPos=0; dataptr=data; endInstr=instructionList;}
     C* getVarPtr(char c){return (c>='a' && c<='z')?(&variables[c-'a']):0;}
     inline void pushPtrVal(C* ptr){stack[stackPos++]=*ptr;}
-    inline void pushVar(int c){stack[stackPos++]=*(variables+c);}
+    inline void pushVar(qint32 c){stack[stackPos++]=*(variables+c);}
     inline void pushVal(C val){stack[stackPos++]=val;}
     C pop(){return stack[--stackPos];}
     C result(){return stack[stackPos-1];}
@@ -367,8 +367,8 @@ public:
     inline void atanh_(){stack[stackPos-1]=atanh(stack[stackPos-1]);}
     inline void pvaratanh_() {stack[stackPos++]=atanh(readVar());}
     inline void pvalatanh_() {stack[stackPos++]=atanh(readVal());}
-    inline void read(void* dst,int size){memcpy(dst,dataptr,size); dataptr+=size;}
-    inline void write(void* src,int size){memcpy(dataptr,src,size);dataptr+=size;}
+    inline void read(void* dst,qint32 size){memcpy(dst,dataptr,size); dataptr+=size;}
+    inline void write(void* src,qint32 size){memcpy(dataptr,src,size);dataptr+=size;}
     inline C readVal(){C val=*(reinterpret_cast<C*>(dataptr)); dataptr+=sizeof(C); return val;}
     inline C* readPtr(){
         C* ptr=*(reinterpret_cast<C**>(dataptr));
@@ -376,15 +376,15 @@ public:
         return ptr;
     }
     inline C readVar(){return variables[readInt()];}
-    inline int readInt(){
-        int i=*(reinterpret_cast<int*>(dataptr));
+    inline qint32 readInt(){
+        qint32 i=*(reinterpret_cast<int*>(dataptr));
         dataptr+=sizeof(int);
         return i;
     }
     inline void writeVal(C val){write(&val,sizeof(C));}
     inline void writePtr(C* ptr){write(&ptr,sizeof(C*));}
-    inline void writeInt(int i){write(&i,sizeof(int));}
-    void writeInstr(int instruction)
+    inline void writeInt(qint32 i){write(&i,sizeof(int));}
+    void writeInstr(qint32 instruction)
     {
         if(*(instrptr-1)<=1 && instruction>1)
             *(instrptr-1)=instruction+*(instrptr-1)+1;
@@ -393,8 +393,8 @@ public:
     }
     void setInstrEnd(){endInstr=instrptr;}
 
-    C pow_(C val, int n){return n>0?pow1(val,n):n<0?1./pow1(val,-n):1;}
-    C pow1(C val,int n){
+    C pow_(C val, qint32 n){return n>0?pow1(val,n):n<0?1./pow1(val,-n):1;}
+    C pow1(C val,qint32 n){
         if(n==1)
             return val;
         else
@@ -410,9 +410,9 @@ public:
 private:
     C stack[STACKSIZE];
     C variables[26];
-    int instructionList[INSTRUCTIONLISTSIZE];
+    qint32 instructionList[INSTRUCTIONLISTSIZE];
     char data[INSTRUCTIONLISTSIZE*8];
-    int stackPos;
+    qint32 stackPos;
     int* endInstr;
     int* instrptr;
     char* dataptr;
@@ -428,7 +428,7 @@ public:
     void setMathEval(MathEval<C>* me){mathEval=me;}
     bool parse(){
         mathEval->reset();
-        int lenread=parseToMathEval(0,0);
+        qint32 lenread=parseToMathEval(0,0);
         if(lenread!=str.length())
         {
             mathEval->reset();
@@ -441,10 +441,10 @@ public:
         }
     }
 private:
-    int parseToMathEval(int level, int pos)
+    qint32 parseToMathEval(qint32 level, qint32 pos)
     {
-        int newpos=pos;
-        int lenread;
+        qint32 newpos=pos;
+        qint32 lenread;
         if(level==5)
         {
             lenread=parseAtomicExpression(newpos);
@@ -480,7 +480,7 @@ private:
                     while(lenread!=0 && newpos<str.length() && str[newpos]==op[level])
                     {
                         ++newpos;
-                        int n;
+                        qint32 n;
                         lenread=readIntNumber(newpos,&n);
                         if(lenread==0)
                         {
@@ -499,11 +499,11 @@ private:
         }
         return newpos-pos;
     }
-    int parseAtomicExpression(int pos)
+    qint32 parseAtomicExpression(qint32 pos)
     {
         bool negative=(str[pos]=='-');
-        //int lenread;
-        int newpos=pos;
+        //qint32 lenread;
+        qint32 newpos=pos;
         if(negative)
         {
             ++newpos;
@@ -550,9 +550,9 @@ private:
         }
         return 0;
     }
-    int readIntNumber(int pos, int *rNum)
+    qint32 readIntNumber(qint32 pos, qint32 *rNum)
     {
-        int newpos=pos;
+        qint32 newpos=pos;
         if(str[pos]=='-')
             ++newpos;
         while(newpos<str.length() && str[newpos]>='0' && str[newpos]<='9')
@@ -568,9 +568,9 @@ private:
         *rNum=str.mid(pos,newpos-pos).toInt();
         return newpos-pos;
     }
-    int parseFloatNumber(int pos)
+    qint32 parseFloatNumber(qint32 pos)
     {
-        int newpos=pos;
+        qint32 newpos=pos;
         if(str[pos]=='-')
             ++newpos;
         while(newpos<str.length() && str[newpos]>='0' && str[newpos]<='9')
@@ -596,29 +596,29 @@ private:
         mathEval->writeVal(val);
         return newpos-pos;
     }
-    int parseVar(int pos)
+    qint32 parseVar(qint32 pos)
     {
         char c=str[pos].toLower().toLatin1();
         mathEval->writeInstr(PUSHVAR);
         mathEval->writeInt((int)(c-'a'));
         return 1;
     }
-    int parseFunc(int pos)
+    qint32 parseFunc(qint32 pos)
     {
-        int newpos=pos;
+        qint32 newpos=pos;
         while(str[newpos].toLower()>='a' && str[newpos].toLower()<='z')
             ++newpos;
         if(str[newpos]!='(')
             return 0;
         String funcName_=str.mid(pos,newpos-pos);
         ++newpos;
-        int funcIndex=0;
+        qint32 funcIndex=0;
         while(funcIndex<NUMFUNC)
         {
             if(funcName_==funcName[funcIndex])
             {
-                int numArgs=funcNumArgs[funcIndex];
-                int lenread=parseToMathEval(0,newpos);
+                qint32 numArgs=funcNumArgs[funcIndex];
+                qint32 lenread=parseToMathEval(0,newpos);
                 if(lenread==0)
                     return 0;
                 newpos+=lenread;
