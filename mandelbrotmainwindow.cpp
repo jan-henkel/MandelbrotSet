@@ -108,9 +108,6 @@ MandelbrotMainWindow::MandelbrotMainWindow(QWidget *parent) :
 
 MandelbrotMainWindow::~MandelbrotMainWindow()
 {
-    //cleanup
-    workerThread.terminate();
-    mandelbrotScene.removeItem(&mandelbrotPixmapItem);
     delete ui;
 }
 
@@ -400,6 +397,14 @@ bool MandelbrotMainWindow::eventFilter(QObject *target, QEvent *e)
         }
     }
     return false;
+}
+
+void MandelbrotMainWindow::closeEvent(QCloseEvent *event)
+{
+    Q_UNUSED(event)
+    //cleanup
+    workerThread.quit();
+    mandelbrotScene.removeItem(&mandelbrotPixmapItem);
 }
 
 //resize event handler

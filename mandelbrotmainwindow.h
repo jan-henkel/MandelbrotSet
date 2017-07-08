@@ -46,6 +46,7 @@ protected:
     virtual void resizeEvent(QResizeEvent *e);
     //event filter to intercept mouse events on the render area
     bool eventFilter(QObject *target, QEvent *e);
+    void closeEvent(QCloseEvent *event);
 private slots:
     //UI interaction slots
     //note: UI code is still messy
