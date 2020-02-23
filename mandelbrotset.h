@@ -6,7 +6,7 @@
 #include <QColor>
 #include <QString>
 #include <complex>
-#include "mathparser.h"
+#include "MathParser/mathparser.h"
 
 
 struct MandelbrotConfig

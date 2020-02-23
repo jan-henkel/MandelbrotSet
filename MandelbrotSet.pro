@@ -16,11 +16,10 @@ QMAKE_CXXFLAGS_RELEASE *= -Ofast
 
 SOURCES += main.cpp\
         mandelbrotmainwindow.cpp \
-    mandelbrotset.cpp \
-    mathparser.cpp
+        mandelbrotset.cpp
 
 HEADERS  += mandelbrotmainwindow.h \
-    mandelbrotset.h \
-    mathparser.h
+            mandelbrotset.h \
+            MathParser/mathparser.h
 
 FORMS    += mandelbrotmainwindow.ui

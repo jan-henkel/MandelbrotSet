@@ -1,0 +1,3 @@
+[submodule "MathParser"]
+	path = MathParser
+	url = https://github.com/jan-henkel/MathParser

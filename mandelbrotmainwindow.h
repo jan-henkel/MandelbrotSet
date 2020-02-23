@@ -10,7 +10,7 @@
 #include <QMouseEvent>
 #include <QFileDialog>
 #include "mandelbrotset.h"
-#include "mathparser.h"
+#include "MathParser/mathparser.h"
 #include <complex>
 #include <map>
 #include <utility>
